@@ -2,11 +2,11 @@
 
 High-performance GPU particle system for WaterUI.
 
-## Features
+## License
 
-- GPU-first simulation using Compute Shaders
-- Ergonomic flat modifier-chain API
-- HDR color support with Linear sRGB
-- Motion blur for rain effects
-- Additive blending for fire/glow
-- Pure-GPU bounds and multi-circle obstacle collision with bounce and surface friction controls
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
