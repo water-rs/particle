@@ -30,7 +30,7 @@ multiple_crate_versions = "allow"
 
 [dependencies]
 waterui-core = { version = "0.3.0" }
-waterui-graphics = { version = "0.3.0", features = ["gpu"] }
+waterui-graphics = { version = "0.4.0", features = ["gpu"] }
 shaderloom = "0.1.0"
 wgpu = "29.0.4"
 bytemuck = { version = "1.25", features = ["derive"] }
@@ -44,7 +44,7 @@ shaderloom = { version = "0.1.0", features = ["build"] }
 [dev-dependencies]
 pollster = "1.0"
 waterui = "0.3.0"
-waterui-testing = "0.3.0"
+waterui-testing = "0.4.0"
 
 [package.metadata.cargo-machete]
 ignored = ["shaderloom"]
