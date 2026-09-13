@@ -1,0 +1,15 @@
+[package]
+name = "particle-example"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lexo Liu"]
+publish = false
+
+[features]
+dev = ["waterui/dynamic_linking"]
+
+[dependencies]
+pollster = "1.0"
+waterui = "0.4.0"
+waterui-graphics = { version = "0.4.0", features = ["gpu"] }
+waterui-particle = { path = "../.." }
