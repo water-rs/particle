@@ -35,7 +35,12 @@ jobs:
         if: runner.os == 'Windows'
         uses: tracel-ai/github-actions/install-dxc@295f2fdbae5271f4f8ad56d634e4ff6a95daafc8
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --all-targets --all-features
+      # The example's `dev` feature turns on the framework's dynamic linking,
+      # which links the whole framework into one dylib; on Windows that trips
+      # MSVC's 65535-object library limit (LNK1189). The example builds with its
+      # default features, and `--all-features` stays on the component itself.
+      - run: cargo test -p waterui-particle --all-targets --all-features
+      - run: cargo check --workspace --all-targets
 
   lint:
     name: Lint
@@ -49,7 +54,8 @@ jobs:
         uses: ./.github/actions/linux-deps
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo clippy -p waterui-particle --all-targets --all-features -- -D warnings
+      - run: cargo clippy --workspace --all-targets -- -D warnings
 
   msrv:
     name: MSRV
@@ -60,4 +66,5 @@ jobs:
       - name: Install Linux dependencies
         uses: ./.github/actions/linux-deps
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace --all-features
+      - run: cargo check -p waterui-particle --all-features
+      - run: cargo check --workspace

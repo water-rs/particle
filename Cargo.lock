@@ -4520,6 +4520,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "particle-example"
+version = "0.1.0"
+dependencies = [
+ "pollster 1.0.1",
+ "waterui",
+ "waterui-graphics",
+ "waterui-particle",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"

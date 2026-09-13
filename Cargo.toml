@@ -1,3 +1,7 @@
+[workspace]
+members = ["examples/particle"]
+resolver = "2"
+
 [package]
 name = "waterui-particle"
 version = "0.1.0"
