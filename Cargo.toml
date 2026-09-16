@@ -33,14 +33,10 @@ undocumented_unsafe_blocks = "warn"
 multiple_crate_versions = "allow"
 
 [dependencies]
-# The wave publishes every waterui-* crate as 0.5.0, but the pinned
-# release-candidate revision still carries the last published versions
-# (core 0.3.2, facade 0.4.1). A `[patch]` entry is only a candidate when the
-# version it carries satisfies the requirement, so each bound spans the pinned
-# version and the release: the graph resolves to the pinned code today and to
-# 0.5.0 the day it is on crates.io.
-waterui-core = { version = ">=0.3.2, <0.6.0" }
-waterui-graphics = { version = ">=0.4.1, <0.6.0", features = ["gpu"] }
+# Each requirement names the version the pinned revision provides; every bound
+# moves to the released version in the commit that drops the pins below.
+waterui-core = { version = "0.3.2" }
+waterui-graphics = { version = "0.4.1", features = ["gpu"] }
 shaderloom = "0.1.2"
 wgpu = "29.0.4"
 bytemuck = { version = "1.25", features = ["derive"] }
@@ -53,8 +49,8 @@ shaderloom = { version = "0.1.2", features = ["build"] }
 
 [dev-dependencies]
 pollster = "1.0"
-waterui = ">=0.4.1, <0.6.0"
-waterui-testing = ">=0.4.1, <0.6.0"
+waterui = "0.4.1"
+waterui-testing = "0.4.1"
 
 [package.metadata.cargo-machete]
 ignored = ["shaderloom"]
