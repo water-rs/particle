@@ -895,7 +895,7 @@ mod tests {
     use encase::{ShaderSize, StorageBuffer};
     use waterui_core::{Binding, Environment, SignalExt};
     use waterui_graphics::{
-        GpuContext, GpuRuntime, GpuView,
+        GpuContext, GpuRuntime, GpuView, SharedGpuContext,
         color::ResolvedColor,
         gpu_surface::RedrawHandle,
         shader_types::{ShaderVec2, ShaderVec4},
@@ -905,8 +905,7 @@ mod tests {
         pollster::block_on(GpuRuntime::new()).expect("particle GPU tests require a working runtime")
     }
 
-    fn test_gpu_context(runtime: &GpuRuntime) -> GpuContext<'_> {
-        let shared = runtime.context();
+    fn test_gpu_context(shared: &SharedGpuContext) -> GpuContext<'_> {
         GpuContext::new(
             &shared.adapter,
             shared.device.as_ref(),
@@ -1156,7 +1155,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         let mut env = waterui_core::Environment::new();
         pollster::block_on(renderer.setup(&ctx, &mut env));
         let config = renderer.config.get();
@@ -1217,7 +1217,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         let mut env = waterui_core::Environment::new();
         pollster::block_on(renderer.setup(&ctx, &mut env));
 
@@ -1303,7 +1304,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         let mut env = waterui_core::Environment::new();
         pollster::block_on(renderer.setup(&ctx, &mut env));
 
@@ -1387,7 +1389,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         let mut env = waterui_core::Environment::new();
         pollster::block_on(renderer.setup(&ctx, &mut env));
 
