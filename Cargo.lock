@@ -2127,7 +2127,7 @@ dependencies = [
  "log",
  "presser",
  "thiserror 2.0.20",
- "windows 0.56.0",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -2439,7 +2439,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.56.0",
+ "windows-core 0.62.2",
 ]
 
 [[package]]
@@ -5878,7 +5878,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
@@ -6524,9 +6524,9 @@ dependencies = [
 
 [[package]]
 name = "waterkit-clipboard"
-version = "0.1.4"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b132ee02723a8c2fc9782d53c0e4ad6563404eda6ee598961b3b333a65c93f07"
+checksum = "5809d59c44c1c48462464a1f802dc9bda7f9fdb16c87549f0bcfc01a4d3d5006"
 dependencies = [
  "async-channel",
  "blocking",
