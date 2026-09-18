@@ -23,6 +23,8 @@
 //!     .gravity(0.0, 2.5);
 //! ```
 
+#![recursion_limit = "256"]
+
 mod config;
 mod gpu;
 mod renderer;

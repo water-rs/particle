@@ -915,6 +915,7 @@ mod tests {
             shared.scene_renderer(),
             NonZeroU32::MIN,
             RedrawHandle::new(),
+            shared.device_loss(),
         )
     }
 
