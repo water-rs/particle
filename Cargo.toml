@@ -33,10 +33,8 @@ undocumented_unsafe_blocks = "warn"
 multiple_crate_versions = "allow"
 
 [dependencies]
-# Each requirement names the version the pinned revision provides; every bound
-# moves to the released version in the commit that drops the pins below.
-waterui-core = { version = "0.3.2" }
-waterui-graphics = { version = "0.4.1", features = ["gpu"] }
+waterui-core = { version = "0.5.0" }
+waterui-graphics = { version = "0.5.0", features = ["gpu"] }
 shaderloom = "0.1.2"
 wgpu = "29.0.4"
 bytemuck = { version = "1.25", features = ["derive"] }
@@ -49,57 +47,15 @@ shaderloom = { version = "0.1.2", features = ["build"] }
 
 [dev-dependencies]
 pollster = "1.0"
-waterui = "0.4.1"
-waterui-testing = "0.4.1"
+waterui = "0.5.0"
+waterui-testing = "0.5.0"
 
 [package.metadata.cargo-machete]
 ignored = ["shaderloom"]
 
-# Until waterui 0.5.0 is on crates.io the framework is consumed by revision
-# pin: every waterui-* crate this graph resolves comes from the same monorepo
-# commit, so the graph carries exactly one copy of each. The pins drop once
-# the release publishes.
+# Third-party forks the monorepo itself patches; a dependency's patch table
+# does not propagate downstream, so they are repeated here.
 [patch.crates-io]
-waterui-svg = { git = "https://github.com/water-rs/svg", rev = "79493d096341faf630e03350f22db73c07bb3b3a" }
-waterui = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-assets = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-assets-core = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-assets-macros = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-assets-planner = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-backend-core = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-controls = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-core = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-dylib = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-form = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-graphics = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-icon = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-inspector-protocol = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-internal = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-layout = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-locale = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-macros = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-map = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-media = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-navigation = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-preview-protocol = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-shape = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-testing = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-text = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-url = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-video = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-watcher-set = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-waterui-webview = { git = "https://github.com/water-rs/waterui", rev = "f004c2fd86280ddf678124c59d984868a9d3f4c6" }
-# Same-wave satellites this graph resolves, pinned at their `dev` HEADs.
-# `waterui-svg` reaches the graph as a git dependency of the framework itself,
-# so it needs no entry here; `waterui-canvas`, `waterui-barcode`,
-# `waterui-chart`, `waterui-video-gpu` and `waterui-map-gpu` sit behind
-# optional features or dev-dependencies that are never enabled in this graph,
-# so they are not resolved.
-hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "6577a58878af46d997d29cddf98613d0d03b0a03" }
-hydrolysis-m3 = { git = "https://github.com/water-rs/hydrolysis-m3", rev = "6a9981926ba3af16bed33b179365ff2d8a85ed05" }
-waterui-image = { git = "https://github.com/water-rs/image", rev = "a1632420ddecde008bde3fe392eee0d9f660d67a" }
-# Third-party forks the monorepo itself patches; git dependencies do not carry
-# their own patch table, so they are repeated here.
 xcb = { git = "https://github.com/rust-x-bindings/rust-xcb", rev = "ae3b2cd080e78173223038ccbebdc644eaf4a9ad" }
 vello = { git = "https://github.com/lexoliu/vello", rev = "5e5f538556be16527f67379b105af82f408b747d" }
 vello_hybrid = { git = "https://github.com/lexoliu/vello", rev = "d68d9e9825bcd1ffee762323881c13a2e7a3f639" }
