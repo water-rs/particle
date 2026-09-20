@@ -60,7 +60,7 @@ ignored = ["shaderloom"]
 # commit, so the graph carries exactly one copy of each. The pins drop once
 # the release publishes.
 [patch.crates-io]
-waterui-svg = { git = "https://github.com/water-rs/svg", rev = "79493d096341faf630e03350f22db73c07bb3b3a" }
+waterui-svg = { git = "https://github.com/water-rs/svg", rev = "12553db2de92e66ff919f56c6dd98ba42f757a00" }
 waterui = { git = "https://github.com/water-rs/waterui", rev = "d6807a87c39b2b3f6e992cd9f205f93a2155ed8b" }
 waterui-assets = { git = "https://github.com/water-rs/waterui", rev = "d6807a87c39b2b3f6e992cd9f205f93a2155ed8b" }
 waterui-assets-core = { git = "https://github.com/water-rs/waterui", rev = "d6807a87c39b2b3f6e992cd9f205f93a2155ed8b" }
@@ -95,9 +95,9 @@ waterui-webview = { git = "https://github.com/water-rs/waterui", rev = "d6807a87
 # `waterui-chart`, `waterui-video-gpu` and `waterui-map-gpu` sit behind
 # optional features or dev-dependencies that are never enabled in this graph,
 # so they are not resolved.
-hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "6577a58878af46d997d29cddf98613d0d03b0a03" }
-hydrolysis-m3 = { git = "https://github.com/water-rs/hydrolysis-m3", rev = "6a9981926ba3af16bed33b179365ff2d8a85ed05" }
-waterui-image = { git = "https://github.com/water-rs/image", rev = "a1632420ddecde008bde3fe392eee0d9f660d67a" }
+hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "71f18452543ea6501de73f003dafb6235f4ba3a7" }
+hydrolysis-m3 = { git = "https://github.com/water-rs/hydrolysis-m3", rev = "38499ef90b0a9e0d3b413fa78350325e88e21044" }
+waterui-image = { git = "https://github.com/water-rs/image", rev = "6b3077431d2edccfd6c7d0b4fb45d69bd1d5bc56" }
 # Third-party forks the monorepo itself patches; git dependencies do not carry
 # their own patch table, so they are repeated here.
 xcb = { git = "https://github.com/rust-x-bindings/rust-xcb", rev = "ae3b2cd080e78173223038ccbebdc644eaf4a9ad" }
