@@ -86,17 +86,17 @@ impl ReactiveParticleConfig {
     }
 
     fn update(&self, resolved: &mut ResolvedParticleConfig) -> bool {
-        resolved.emitter_pos = self.config.emitter.position.get();
-        resolved.emitter_shape = self.config.emitter.shape.get();
-        resolved.emit_rate = self.config.emitter.rate.get();
-        resolved.gravity = self.config.environment.gravity.get();
-        resolved.wind = self.config.environment.wind.get();
-        resolved.turbulence = self.config.environment.turbulence.get();
-        resolved.drag = self.config.environment.drag.get();
+        resolved.emitter_pos = self.config.emitter.position.snapshot();
+        resolved.emitter_shape = self.config.emitter.shape.snapshot();
+        resolved.emit_rate = self.config.emitter.rate.snapshot();
+        resolved.gravity = self.config.environment.gravity.snapshot();
+        resolved.wind = self.config.environment.wind.snapshot();
+        resolved.turbulence = self.config.environment.turbulence.snapshot();
+        resolved.drag = self.config.environment.drag.snapshot();
         resolved.collision_enabled = self.config.collision.enabled;
-        resolved.collision_bounds = self.config.collision.bounds.get();
-        resolved.collision_restitution = self.config.collision.restitution.get();
-        resolved.collision_surface_friction = self.config.collision.surface_friction.get();
+        resolved.collision_bounds = self.config.collision.bounds.snapshot();
+        resolved.collision_restitution = self.config.collision.restitution.snapshot();
+        resolved.collision_surface_friction = self.config.collision.surface_friction.snapshot();
         let obstacles_changed = self.obstacles_dirty.replace(false);
         if obstacles_changed {
             resolved.collision_circle_obstacles.clear();
@@ -105,22 +105,22 @@ impl ReactiveParticleConfig {
                     .collision
                     .circle_obstacles
                     .iter()
-                    .map(|obstacle| obstacle.value.get()),
+                    .map(|obstacle| obstacle.value.snapshot()),
             );
         }
         resolved.interaction_enabled = self.config.interaction.enabled;
-        resolved.interaction_radius = self.config.interaction.radius.get();
-        resolved.interaction_strength = self.config.interaction.strength.get();
-        resolved.life_range = self.config.particle.life.get();
-        resolved.speed_range = self.config.particle.speed.get();
-        resolved.angle_range = self.config.particle.angle.get();
-        resolved.size_range = self.config.particle.size.get();
-        resolved.spin_range = self.config.particle.spin.get();
+        resolved.interaction_radius = self.config.interaction.radius.snapshot();
+        resolved.interaction_strength = self.config.interaction.strength.snapshot();
+        resolved.life_range = self.config.particle.life.snapshot();
+        resolved.speed_range = self.config.particle.speed.snapshot();
+        resolved.angle_range = self.config.particle.angle.snapshot();
+        resolved.size_range = self.config.particle.size.snapshot();
+        resolved.spin_range = self.config.particle.spin.snapshot();
         resolved.color_start = self.color_start.get();
         resolved.color_end = self.color_end.get();
         resolved.stretch_with_velocity = self.config.particle.stretch_with_velocity;
         resolved.blend_mode = self.config.blend_mode;
-        resolved.softness = self.config.particle.softness.get();
+        resolved.softness = self.config.particle.softness.snapshot();
         resolved.shape = self.config.particle.shape;
         obstacles_changed
     }
