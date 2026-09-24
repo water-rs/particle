@@ -98,7 +98,7 @@ waterui-url = { git = "https://github.com/water-rs/waterui", rev = "af5f9ab651dd
 waterui-video = { git = "https://github.com/water-rs/waterui", rev = "af5f9ab651dd69c4d8ba3dc8cf4c7457a036bc1b" }
 waterui-watcher-set = { git = "https://github.com/water-rs/waterui", rev = "af5f9ab651dd69c4d8ba3dc8cf4c7457a036bc1b" }
 waterui-webview = { git = "https://github.com/water-rs/waterui", rev = "af5f9ab651dd69c4d8ba3dc8cf4c7457a036bc1b" }
-waterkit-core = { path = "/home/ubuntu/repos/waterkit/core" }
-waterui-image = { path = "/home/ubuntu/repos/image" }
-hydrolysis = { path = "/home/ubuntu/repos/hydrolysis" }
+waterkit-core = { git = "https://github.com/water-rs/waterkit", rev = "d154f581be8b3b865799a50cdc7fb7a3fd6b8717" }
+waterui-image = { git = "https://github.com/water-rs/image", rev = "bf1fc174f928ba475d15d1bf196255964561e06b" }
+hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "a8463ab952b29059292ba8f45737a0fbf807bccf" }
 waterui = { git = "https://github.com/water-rs/waterui", rev = "af5f9ab651dd69c4d8ba3dc8cf4c7457a036bc1b" }
