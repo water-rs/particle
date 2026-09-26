@@ -3,13 +3,16 @@
 use crate::{
     EmitterShape,
     config::{BlendMode, CircleObstacleConfig, ParticleConfig},
-    renderer::ParticleRenderer,
+    renderer::{ParticleFeed, ParticleRenderer},
 };
 use core::num::NonZeroU32;
+use std::time::{Duration, Instant};
 use waterui_core::{Computed, Environment, IntoSignal, IntoSignalF32, SignalExt, View};
 use waterui_graphics::{
-    GpuRuntime, GpuSurface, OffscreenRenderConfig, OffscreenRenderError, OffscreenRenderOutput,
-    OffscreenRenderOutputHdr, color::Color,
+    cherenkov::{FrameTime, Offscreen, OffscreenFormat, Readback},
+    color::Color,
+    gpu::{GpuContentView, GpuRuntime},
+    offscreen::{OffscreenError, OffscreenSize},
 };
 
 /// High-performance GPU particle system.
@@ -308,94 +311,48 @@ impl ParticleSystem {
         self
     }
 
-    fn renderer(self, env: &Environment) -> ParticleRenderer {
+    fn renderer(self, env: &Environment) -> (ParticleFeed, ParticleRenderer) {
         ParticleRenderer::reactive(self.max_particles, self.config, env)
     }
 
-    /// Render the particle system to an offscreen RGBA8 target via `GpuSurface`.
+    /// Simulates frames on the engine and reads premultiplied linear Display P3 pixels.
+    ///
+    /// An initial frame sets up the simulation, then `frame_count` steps advance it.
+    /// The caller supplies the simulation interval; no wall-clock waiting is required.
+    /// Convert the returned HDR pixels with `OffscreenImage::from_readback` for an SDR export.
     ///
     /// # Errors
-    ///
-    /// Returns an error when the underlying GPU offscreen render fails.
-    #[expect(
-        clippy::future_not_send,
-        reason = "particle snapshots await the UI-local offscreen GpuView environment"
-    )]
-    pub async fn render_offscreen(
+    /// Returns engine initialization, surface creation, rendering, or readback errors.
+    pub fn render_offscreen(
         self,
         runtime: &GpuRuntime,
-        config: OffscreenRenderConfig,
-        env: &mut Environment,
-    ) -> Result<OffscreenRenderOutput, OffscreenRenderError> {
-        self.render_offscreen_frames(runtime, config, env, NonZeroU32::MIN)
-            .await
-    }
-
-    /// Render the particle system to an offscreen RGBA8 target for `frame_count` frames via `GpuSurface`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when the underlying GPU offscreen render fails.
-    #[expect(
-        clippy::future_not_send,
-        reason = "particle snapshots await the UI-local offscreen GpuView environment"
-    )]
-    pub async fn render_offscreen_frames(
-        self,
-        runtime: &GpuRuntime,
-        config: OffscreenRenderConfig,
-        env: &mut Environment,
+        size: OffscreenSize,
+        env: &Environment,
         frame_count: NonZeroU32,
-    ) -> Result<OffscreenRenderOutput, OffscreenRenderError> {
-        GpuSurface::new(self.renderer(env))
-            .render_offscreen_frames(runtime, config, env, frame_count)
-            .await
-    }
-
-    /// Render the particle system to an HDR offscreen target via `GpuSurface`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when the underlying GPU offscreen render fails.
-    #[expect(
-        clippy::future_not_send,
-        reason = "particle snapshots await the UI-local offscreen GpuView environment"
-    )]
-    pub async fn render_offscreen_hdr(
-        self,
-        runtime: &GpuRuntime,
-        config: OffscreenRenderConfig,
-        env: &mut Environment,
-    ) -> Result<OffscreenRenderOutputHdr, OffscreenRenderError> {
-        self.render_offscreen_hdr_frames(runtime, config, env, NonZeroU32::MIN)
-            .await
-    }
-
-    /// Render the particle system to an HDR offscreen target for `frame_count` frames via `GpuSurface`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when the underlying GPU offscreen render fails.
-    #[expect(
-        clippy::future_not_send,
-        reason = "particle snapshots await the UI-local offscreen GpuView environment"
-    )]
-    pub async fn render_offscreen_hdr_frames(
-        self,
-        runtime: &GpuRuntime,
-        config: OffscreenRenderConfig,
-        env: &mut Environment,
-        frame_count: NonZeroU32,
-    ) -> Result<OffscreenRenderOutputHdr, OffscreenRenderError> {
-        GpuSurface::new(self.renderer(env))
-            .render_offscreen_hdr_frames(runtime, config, env, frame_count)
-            .await
+        frame_interval: Duration,
+    ) -> Result<Readback, OffscreenError> {
+        let (feed, renderer) = self.renderer(env);
+        let engine = runtime.engine()?;
+        let pixels = (size.width(), size.height());
+        let surface = engine.surface(Offscreen::new(pixels, OffscreenFormat::LinearF16))?;
+        let content = GpuContentView::new(renderer).take_engine_content(|| {});
+        surface.update(|tx| {
+            tx[surface.root()].content(engine.gpu_content(pixels, content));
+        });
+        let start = Instant::now();
+        engine.render(FrameTime::at(start))?;
+        for frame in 1..=frame_count.get() {
+            feed.pump();
+            engine.render(FrameTime::at(start + frame_interval * frame))?;
+        }
+        Ok(surface.readback()?)
     }
 }
 
 impl View for ParticleSystem {
     fn body(self, env: &Environment) -> impl View {
-        GpuSurface::new(self.renderer(env))
+        let (feed, renderer) = self.renderer(env);
+        GpuContentView::new(renderer).on_frame(move || feed.pump())
     }
 }
 
