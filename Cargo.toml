@@ -41,6 +41,7 @@ shaderloom = "0.1.2"
 wgpu = "29.0.4"
 bytemuck = { version = "1.25", features = ["derive"] }
 encase = "0.12"
+glam = { version = "0.33", features = ["encase-012", "bytemuck"] }
 fastrand = "2.5"
 num-traits = { version = "0.2", default-features = false }
 

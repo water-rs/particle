@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 
 use waterui_core::Environment;
 use waterui_graphics::{
-    GpuRuntime, OffscreenRenderConfig, OffscreenRenderOutput, OffscreenSize, color::Color,
+    color::Color,
+    gpu::GpuRuntime,
+    offscreen::{OffscreenImage, OffscreenSize},
 };
 use waterui_particle::{ParticleShape, ParticleSystem};
 
@@ -119,11 +121,11 @@ fn bounce_box_scene() -> ParticleSystem {
 }
 
 fn composite_over_opaque_background(
-    output: &OffscreenRenderOutput,
+    output: &OffscreenImage,
     background: [u8; 3],
-) -> OffscreenRenderOutput {
+) -> OffscreenImage {
     let rgba8 = output
-        .rgba8
+        .premultiplied_rgba8()
         .as_chunks::<4>()
         .0
         .iter()
@@ -142,50 +144,39 @@ fn composite_over_opaque_background(
         })
         .collect();
 
-    OffscreenRenderOutput {
+    OffscreenImage {
         width: output.width,
         height: output.height,
         rgba8,
     }
 }
 
-#[expect(
-    clippy::future_not_send,
-    reason = "offscreen GpuView state is intentionally main-thread local"
-)]
-async fn write_snapshot(runtime: &GpuRuntime, output_dir: &Path, spec: SnapshotSpec) {
+fn write_snapshot(runtime: &GpuRuntime, output_dir: &Path, spec: SnapshotSpec) {
     let size = OffscreenSize::try_from_pixels(spec.width, spec.height)
         .expect("snapshot frame size must be valid");
-    let render_config = OffscreenRenderConfig::new(size);
-    let mut env = Environment::new();
+    let env = Environment::new();
     let output = spec
         .system
-        .render_offscreen_frames(runtime, render_config, &mut env, spec.frames)
-        .await
+        .render_offscreen(
+            runtime,
+            size,
+            &env,
+            spec.frames,
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
         .expect("particle snapshot render should succeed");
+    let output = OffscreenImage::from_readback(&output);
 
-    fs::write(
-        output_dir.join(format!("{}.raw.png", spec.name)),
-        output
-            .to_png()
-            .expect("raw particle png encoding should succeed"),
-    )
-    .expect("raw particle png write should succeed");
+    output
+        .save_png(output_dir.join(format!("{}.raw.png", spec.name)))
+        .expect("raw particle png write should succeed");
 
     let composited = composite_over_opaque_background(&output, spec.background);
-    fs::write(
-        output_dir.join(format!("{}.png", spec.name)),
-        composited
-            .to_png()
-            .expect("composited particle png encoding should succeed"),
-    )
-    .expect("composited particle png write should succeed");
+    composited
+        .save_png(output_dir.join(format!("{}.png", spec.name)))
+        .expect("composited particle png write should succeed");
 }
 
-#[expect(
-    clippy::future_not_send,
-    reason = "offscreen GpuView state is intentionally main-thread local"
-)]
 async fn run() {
     let output_dir = env::args_os().nth(1).map(PathBuf::from).expect(
         "usage: cargo run -p waterui-particle --example gpu_surface_snapshots -- <output-dir>",
@@ -263,7 +254,7 @@ async fn run() {
     ];
 
     for spec in snapshots {
-        write_snapshot(&runtime, &output_dir, spec).await;
+        write_snapshot(&runtime, &output_dir, spec);
     }
 }
 
