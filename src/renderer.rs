@@ -7,9 +7,11 @@ use crate::{
         CollisionUniforms, GpuCircleObstacle, GpuParticle, InteractionUniforms, ShaderVec2,
         ShaderVec4, Uniforms,
     },
+    shaders::{COMPUTE_SHADER, RENDER_SHADER},
 };
 use encase::{ShaderSize, StorageBuffer};
 use num_traits::ToPrimitive;
+use shaderloom::{CompiledShader, CompiledShaderModule, ShaderStage};
 use std::mem::offset_of;
 use std::sync::mpsc::{self, Receiver, Sender};
 use waterui_core::{Computed, Environment, Signal, SignalExt, flatten_signal};
@@ -483,6 +485,44 @@ fn fill_mapped_buffer(buffer: &wgpu::Buffer, value: u8) {
     buffer.unmap();
 }
 
+/// Creates the shader's bind group layouts and asserts there is exactly one.
+fn single_bind_group_layout(
+    shader: &CompiledShader,
+    device: &wgpu::Device,
+    label: &str,
+) -> wgpu::BindGroupLayout {
+    let mut layouts = shader.create_bind_group_layouts(device);
+    assert_eq!(
+        layouts.len(),
+        1,
+        "{label} must declare exactly one bind group"
+    );
+    layouts
+        .pop()
+        .expect("a shader with one bind group layout must yield one layout")
+}
+
+/// Creates the shader's render-stage modules and its single bind group layout.
+fn single_bind_group_render_stages(
+    shader: &CompiledShader,
+    device: &wgpu::Device,
+    label: &str,
+    vertex_entry_point: &str,
+    fragment_entry_point: &str,
+) -> (
+    CompiledShaderModule,
+    CompiledShaderModule,
+    wgpu::BindGroupLayout,
+) {
+    let (vertex_shader, fragment_shader) =
+        shader.create_render_stages(device, vertex_entry_point, fragment_entry_point);
+    (
+        vertex_shader,
+        fragment_shader,
+        single_bind_group_layout(shader, device, label),
+    )
+}
+
 impl GpuContent for ParticleRenderer {
     #[expect(
         clippy::too_many_lines,
@@ -553,28 +593,52 @@ impl GpuContent for ParticleRenderer {
         });
         fill_mapped_buffer(&particle_links_buffer, 0xff);
 
-        let compute_module = crate::shaders::compute_module(device);
-        let compute_bind_group_layout = crate::shaders::compute_bind_group_layout(device);
+        let clear_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "clear_grid");
+        let build_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "build_grid");
+        let simulate_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "simulate_particles");
+        let compute_bind_group_layout =
+            single_bind_group_layout(&COMPUTE_SHADER, device, "the particle compute shader");
         let compute_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Particle Compute PL"),
                 bind_group_layouts: &[Some(&compute_bind_group_layout)],
                 immediate_size: 0,
             });
-        let compute_pipeline = |label: &'static str, entry_point| {
+        let compute_pipeline_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let clear_grid_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(label),
+                label: Some("Particle Clear Grid Pipeline"),
                 layout: Some(&compute_pipeline_layout),
-                module: &compute_module,
-                entry_point: Some(entry_point),
+                module: clear_grid_shader.module(),
+                entry_point: Some(clear_grid_shader.entry_point()),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 cache: None,
-            })
-        };
-        let clear_grid_pipeline = compute_pipeline("Particle Clear Grid Pipeline", "clear_grid");
-        let build_grid_pipeline = compute_pipeline("Particle Build Grid Pipeline", "build_grid");
-        let simulate_pipeline =
-            compute_pipeline("Particle Simulate Pipeline", "simulate_particles");
+            });
+        let build_grid_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Particle Build Grid Pipeline"),
+                layout: Some(&compute_pipeline_layout),
+                module: build_grid_shader.module(),
+                entry_point: Some(build_grid_shader.entry_point()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            });
+        let simulate_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Particle Simulate Pipeline"),
+            layout: Some(&compute_pipeline_layout),
+            module: simulate_shader.module(),
+            entry_point: Some(simulate_shader.entry_point()),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
+        let compute_pipeline_error = pollster::block_on(compute_pipeline_scope.pop());
+        assert!(
+            compute_pipeline_error.is_none(),
+            "particle compute pipeline creation failed: {compute_pipeline_error:?}"
+        );
         let compute_bind_groups = std::array::from_fn(|source_index| {
             let target_index = 1 - source_index;
             Some(
@@ -620,26 +684,33 @@ impl GpuContent for ParticleRenderer {
             )
         });
 
-        let render_module = crate::shaders::render_module(device);
-        let render_bind_group_layout = crate::shaders::render_bind_group_layout(device);
+        let (vertex_shader, fragment_shader, render_bind_group_layout) =
+            single_bind_group_render_stages(
+                &RENDER_SHADER,
+                device,
+                "the particle render shader",
+                "vs_main",
+                "fs_main",
+            );
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Particle Render PL"),
                 bind_group_layouts: &[Some(&render_bind_group_layout)],
                 immediate_size: 0,
             });
+        let render_pipeline_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Particle Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &render_module,
-                entry_point: Some("vs_main"),
+                module: vertex_shader.module(),
+                entry_point: Some(vertex_shader.entry_point()),
                 buffers: &[Some(particle_vertex_layout())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
-                module: &render_module,
-                entry_point: Some("fs_main"),
+                module: fragment_shader.module(),
+                entry_point: Some(fragment_shader.entry_point()),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: ctx.format,
                     blend: Some(blend_state(config.blend_mode)),
@@ -656,6 +727,11 @@ impl GpuContent for ParticleRenderer {
             multiview_mask: None,
             cache: None,
         });
+        let render_pipeline_error = pollster::block_on(render_pipeline_scope.pop());
+        assert!(
+            render_pipeline_error.is_none(),
+            "particle render pipeline creation failed: {render_pipeline_error:?}"
+        );
         let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Particle Render BG"),
             layout: &render_bind_group_layout,
@@ -781,20 +857,47 @@ mod tests {
         cherenkov::{Engine, FrameTime, Offscreen, OffscreenFormat},
         cherenkov_gpu::{Gpu, GpuConfig},
         color::WorkingColor,
-        gpu::{Context, Frame, GpuContent, GpuContentView, GpuRuntime, RedrawHandle},
+        gpu::{Context, Frame, GpuContent, GpuContentView, RedrawHandle},
         offscreen::OffscreenImage,
         wgpu,
     };
 
-    fn test_gpu_runtime() -> GpuRuntime {
-        pollster::block_on(GpuRuntime::new()).expect("particle GPU tests require a working runtime")
+    /// Device owned by the test so it can request the features the shaders need.
+    struct TestGpu {
+        adapter: wgpu::Adapter,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
     }
 
-    fn test_gpu_context(runtime: &GpuRuntime) -> Context<'_> {
+    fn test_gpu() -> TestGpu {
+        let instance =
+            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+            apply_limit_buckets: false,
+        }))
+        .expect("particle GPU tests require a GPU adapter");
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("Particle Test Device"),
+            required_features: shaderloom::required_features(adapter.features())
+                | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
+            ..Default::default()
+        }))
+        .expect("particle GPU tests require a GPU device");
+        TestGpu {
+            adapter,
+            device,
+            queue,
+        }
+    }
+
+    fn test_gpu_context(gpu: &TestGpu) -> Context<'_> {
         Context {
-            adapter: runtime.adapter(),
-            device: runtime.device(),
-            queue: runtime.queue(),
+            adapter: &gpu.adapter,
+            device: &gpu.device,
+            queue: &gpu.queue,
             format: wgpu::TextureFormat::Rgba16Float,
             redraw: RedrawHandle::new(|| {}),
         }
@@ -1028,8 +1131,8 @@ mod tests {
             ..particle_test_config(256)
         });
 
-        let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let gpu = test_gpu();
+        let ctx = test_gpu_context(&gpu);
         renderer.setup(&ctx);
         let config = renderer.resolved_config.clone();
         renderer.update_uniforms(
@@ -1088,8 +1191,8 @@ mod tests {
             ..particle_test_config(1)
         });
 
-        let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let gpu = test_gpu();
+        let ctx = test_gpu_context(&gpu);
         renderer.setup(&ctx);
 
         let mut particle = GpuParticle::default();
@@ -1173,8 +1276,8 @@ mod tests {
             ..particle_test_config(1)
         });
 
-        let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let gpu = test_gpu();
+        let ctx = test_gpu_context(&gpu);
         renderer.setup(&ctx);
 
         let mut particle = GpuParticle::default();
@@ -1256,8 +1359,8 @@ mod tests {
             ..particle_test_config(2)
         });
 
-        let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let gpu = test_gpu();
+        let ctx = test_gpu_context(&gpu);
         renderer.setup(&ctx);
 
         let mut first = GpuParticle::default();

@@ -45,14 +45,21 @@ host-e2e = []
 [dependencies]
 waterui-core = "0.5.0"
 waterui-graphics = { version = "0.5.0", features = ["gpu"] }
+shaderloom = "0.1.2"
 bytemuck = { version = "1.23.1", features = ["derive"] }
 encase = "0.13"
 fastrand = "2.3"
 num-traits = "0.2.19"
+pollster = "0.4.0"
+
+[build-dependencies]
+shaderloom = { version = "0.1.2", default-features = false, features = ["build"] }
 
 [dev-dependencies]
 waterui = "0.5.0"
-pollster = "0.4.0"
+
+[package.metadata.cargo-machete]
+ignored = ["shaderloom"]
 
 [patch.crates-io]
 nami = { git = "https://github.com/water-rs/nami", rev = "f1db5017f5d64cb45b9b304c74ff420377258476" }
@@ -62,6 +69,7 @@ cherenkov-gpu = { git = "https://github.com/water-rs/cherenkov", rev = "a7708216
 filtrate = { git = "https://github.com/water-rs/cherenkov", rev = "a7708216db67bbf976e1fe36429a6a54cf82ba8a" }
 filtrate-core = { git = "https://github.com/water-rs/cherenkov", rev = "a7708216db67bbf976e1fe36429a6a54cf82ba8a" }
 filtrate-derive = { git = "https://github.com/water-rs/cherenkov", rev = "a7708216db67bbf976e1fe36429a6a54cf82ba8a" }
+shaderloom = { git = "https://github.com/water-rs/shaderloom", rev = "8e94d05151a837cfa8a1445f39613a6182e2cc7d" }
 waterui = { git = "https://github.com/water-rs/waterui", rev = "163fbb37b8304ac6a025493add2c4692feabd97f" }
 waterui-assets = { git = "https://github.com/water-rs/waterui", rev = "163fbb37b8304ac6a025493add2c4692feabd97f" }
 waterui-assets-core = { git = "https://github.com/water-rs/waterui", rev = "163fbb37b8304ac6a025493add2c4692feabd97f" }

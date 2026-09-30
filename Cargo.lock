@@ -2939,6 +2939,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 
 [[package]]
+name = "prettyplease"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bfe0f4c752e450fc2faf62654f1c134747922825d5b04ca717b8874f41a40c0"
+dependencies = [
+ "proc-macro2",
+ "syn 3.0.6",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3401,6 +3411,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "shaderloom"
+version = "0.1.2"
+source = "git+https://github.com/water-rs/shaderloom?rev=8e94d05151a837cfa8a1445f39613a6182e2cc7d#8e94d05151a837cfa8a1445f39613a6182e2cc7d"
+dependencies = [
+ "naga",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 3.0.6",
+ "toml",
+ "wgpu",
 ]
 
 [[package]]
@@ -4514,6 +4539,7 @@ dependencies = [
  "fastrand",
  "num-traits",
  "pollster 0.4.0",
+ "shaderloom",
  "waterui",
  "waterui-core",
  "waterui-graphics",
