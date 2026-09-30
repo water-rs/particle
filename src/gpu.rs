@@ -3,7 +3,96 @@
 //! Uses encase for automatic WGSL-compatible alignment.
 
 use encase::ShaderType;
-use waterui_graphics::shader_types::{ShaderVec2, ShaderVec4};
+
+macro_rules! shader_vector {
+    ($name:ident, $length:literal, $zero:expr, $doc:literal) => {
+        #[doc = $doc]
+        #[repr(transparent)]
+        #[derive(
+            Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable,
+        )]
+        pub struct $name([f32; $length]);
+
+        impl $name {
+            /// Vector with every component set to zero.
+            #[allow(dead_code)]
+            pub const ZERO: Self = Self($zero);
+
+            /// Creates a shader vector from its component array.
+            #[must_use]
+            pub const fn from_array(value: [f32; $length]) -> Self {
+                Self(value)
+            }
+        }
+
+        impl AsRef<[f32; $length]> for $name {
+            fn as_ref(&self) -> &[f32; $length] {
+                &self.0
+            }
+        }
+
+        impl AsMut<[f32; $length]> for $name {
+            fn as_mut(&mut self) -> &mut [f32; $length] {
+                &mut self.0
+            }
+        }
+
+        impl From<[f32; $length]> for $name {
+            fn from(value: [f32; $length]) -> Self {
+                Self::from_array(value)
+            }
+        }
+
+        encase::impl_vector!($length, $name, f32; using AsRef AsMut From);
+    };
+}
+
+shader_vector!(
+    ShaderVec2,
+    2,
+    [0.0; 2],
+    "Two-component floating-point vector with WGSL-compatible layout."
+);
+shader_vector!(
+    ShaderVec4,
+    4,
+    [0.0; 4],
+    "Four-component floating-point vector with WGSL-compatible layout."
+);
+
+impl ShaderVec2 {
+    /// Creates a vector from its `x` and `y` components.
+    #[must_use]
+    pub const fn new(x: f32, y: f32) -> Self {
+        Self([x, y])
+    }
+
+    /// Returns the `x` component.
+    #[cfg(test)]
+    #[must_use]
+    pub const fn x(self) -> f32 {
+        self.0[0]
+    }
+
+    /// Returns the `y` component.
+    #[cfg(test)]
+    #[must_use]
+    pub const fn y(self) -> f32 {
+        self.0[1]
+    }
+}
+
+impl ShaderVec4 {
+    /// Vector with every component set to one.
+    pub const ONE: Self = Self([1.0; 4]);
+
+    /// Creates a vector from its `x`, `y`, `z`, and `w` components.
+    #[cfg(test)]
+    #[must_use]
+    pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+        Self([x, y, z, w])
+    }
+}
 
 /// GPU representation of a single particle.
 /// Uses explicit padding so the storage layout also works as an instanced vertex buffer.
@@ -27,7 +116,7 @@ pub struct GpuParticle {
     _pad0: f32,
     _pad1: f32,
     _pad2: f32,
-    /// Color in Linear sRGB.
+    /// Color in linear Display P3.
     pub color: ShaderVec4,
 }
 

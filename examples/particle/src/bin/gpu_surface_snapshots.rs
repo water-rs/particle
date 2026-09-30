@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use particle_example::{explosion_system, flame_system, rain_system};
 use waterui::prelude::Environment;
-use waterui_graphics::{GpuRuntime, OffscreenRenderConfig, OffscreenRenderOutput, OffscreenSize};
+use waterui_graphics::offscreen::{OffscreenImage, OffscreenSize};
 use waterui_particle::ParticleSystem;
 
 struct SnapshotSpec {
@@ -36,46 +36,40 @@ fn composite_over_opaque_background(pixels: &[u8], background: [u8; 3]) -> Vec<u
         .collect()
 }
 
-async fn write_snapshot(runtime: &GpuRuntime, output_dir: &Path, spec: SnapshotSpec) {
+fn write_snapshot(output_dir: &Path, spec: SnapshotSpec) {
     let size = OffscreenSize::try_from_pixels(spec.width, spec.height)
         .expect("snapshot frame size must be valid");
-    let render_config = OffscreenRenderConfig::new(size);
-    let mut env = Environment::new();
+    let env = Environment::new();
     let output = (spec.system)()
-        .render_offscreen(runtime, render_config, &mut env)
-        .await
+        .render_offscreen(
+            size,
+            &env,
+            core::num::NonZeroU32::MIN,
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        )
         .expect("particle snapshot render should succeed");
+    let output = OffscreenImage::from_readback(&output);
 
-    let raw_png = output
-        .to_png()
-        .expect("raw particle png encoding should succeed");
-    fs::write(output_dir.join(format!("{}.raw.png", spec.name)), raw_png)
+    output
+        .save_png(output_dir.join(format!("{}.raw.png", spec.name)))
         .expect("raw particle png write should succeed");
 
-    let composited = OffscreenRenderOutput {
+    let composited = OffscreenImage {
         width: output.width,
         height: output.height,
-        rgba8: composite_over_opaque_background(&output.rgba8, spec.background),
+        rgba8: composite_over_opaque_background(&output.premultiplied_rgba8(), spec.background),
     };
-    let composited_png = composited
-        .into_png()
-        .expect("composited particle png encoding should succeed");
-    fs::write(
-        output_dir.join(format!("{}.png", spec.name)),
-        composited_png,
-    )
-    .expect("composited particle png write should succeed");
+    composited
+        .save_png(output_dir.join(format!("{}.png", spec.name)))
+        .expect("composited particle png write should succeed");
 }
 
-async fn run() {
+fn run() {
     let output_dir = env::args_os()
         .nth(1)
         .map(PathBuf::from)
         .expect("usage: cargo run -p particle-example --bin gpu_surface_snapshots -- <output-dir>");
     fs::create_dir_all(&output_dir).expect("snapshot output directory must be creatable");
-    let runtime = GpuRuntime::new()
-        .await
-        .expect("particle snapshot export requires a working GPU runtime");
 
     let snapshots = [
         SnapshotSpec {
@@ -102,10 +96,10 @@ async fn run() {
     ];
 
     for spec in snapshots {
-        write_snapshot(&runtime, &output_dir, spec).await;
+        write_snapshot(&output_dir, spec);
     }
 }
 
 fn main() {
-    pollster::block_on(run());
+    run();
 }
