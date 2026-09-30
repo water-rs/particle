@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use waterui_core::Environment;
 use waterui_graphics::{
+    cherenkov::{ColorSpace, LinearDisplayP3, Readback, Srgb},
     color::Color,
     offscreen::{OffscreenImage, OffscreenSize},
 };
@@ -120,35 +121,53 @@ fn bounce_box_scene() -> ParticleSystem {
         .softness(0.25)
 }
 
-fn composite_over_opaque_background(
-    output: &OffscreenImage,
-    background: [u8; 3],
-) -> OffscreenImage {
-    let rgba8 = output
-        .premultiplied_rgba8()
-        .as_chunks::<4>()
-        .0
+/// Composites the premultiplied readback like the engine's presentation pass:
+/// source-over in linear Display P3, so additive blends saturate the same way
+/// they do on screen.
+fn composite_over_opaque_background(readback: &Readback, background: [u8; 3]) -> OffscreenImage {
+    let background = LinearDisplayP3::from_linear_srgb(Srgb::to_linear_srgb([
+        f32::from(background[0]) / 255.0,
+        f32::from(background[1]) / 255.0,
+        f32::from(background[2]) / 255.0,
+    ]));
+    let rgba8 = readback
+        .pixels
         .iter()
-        .flat_map(|pixel| {
-            let alpha = u16::from(pixel[3]);
-            let inv_alpha = 255_u16 - alpha;
-            let red = u16::from(pixel[0]) + (u16::from(background[0]) * inv_alpha + 127) / 255;
-            let green = u16::from(pixel[1]) + (u16::from(background[1]) * inv_alpha + 127) / 255;
-            let blue = u16::from(pixel[2]) + (u16::from(background[2]) * inv_alpha + 127) / 255;
-            [
-                red.min(255) as u8,
-                green.min(255) as u8,
-                blue.min(255) as u8,
-                255,
-            ]
+        .flat_map(|[red, green, blue, alpha]| {
+            let linear = LinearDisplayP3::to_linear_srgb([
+                red + (1.0 - alpha) * background[0],
+                green + (1.0 - alpha) * background[1],
+                blue + (1.0 - alpha) * background[2],
+            ]);
+            [encode(linear[0]), encode(linear[1]), encode(linear[2]), 255]
         })
         .collect();
 
     OffscreenImage {
-        width: output.width,
-        height: output.height,
+        width: readback.width,
+        height: readback.height,
         rgba8,
     }
+}
+
+/// sRGB-encodes one linear channel.
+fn encode(linear: f32) -> u8 {
+    let clipped = linear.clamp(0.0, 1.0);
+    let encoded = if clipped <= 0.003_130_8 {
+        clipped * 12.92
+    } else {
+        1.055_f32.mul_add(clipped.powf(1.0 / 2.4), -0.055)
+    };
+    encode_channel(encoded)
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the value is clamped to [0, 255] before the cast"
+)]
+fn encode_channel(unit: f32) -> u8 {
+    (unit * 255.0).round() as u8
 }
 
 fn write_snapshot(output_dir: &Path, spec: SnapshotSpec) {
@@ -159,9 +178,8 @@ fn write_snapshot(output_dir: &Path, spec: SnapshotSpec) {
         .system
         .render_offscreen(size, &env, spec.frames, Duration::from_secs_f64(1.0 / 60.0))
         .expect("particle snapshot render should succeed");
-    let output = OffscreenImage::from_readback(&output);
 
-    output
+    OffscreenImage::from_readback(&output)
         .save_png(output_dir.join(format!("{}.raw.png", spec.name)))
         .expect("raw particle png write should succeed");
 
@@ -181,47 +199,23 @@ fn run() {
             name: "rain",
             width: 540,
             height: 960,
-            frames: NonZeroU32::new(8).expect("non-zero literal"),
+            frames: NonZeroU32::new(72).expect("non-zero literal"),
             background: [0x0F, 0x17, 0x2A],
             system: rain_scene(),
         },
         SnapshotSpec {
-            name: "flame_02",
+            name: "flame",
             width: 600,
             height: 600,
-            frames: NonZeroU32::new(2).expect("non-zero literal"),
+            frames: NonZeroU32::new(60).expect("non-zero literal"),
             background: [0x00, 0x00, 0x00],
             system: flame_scene(),
         },
         SnapshotSpec {
-            name: "flame_08",
+            name: "fog",
             width: 600,
             height: 600,
-            frames: NonZeroU32::new(8).expect("non-zero literal"),
-            background: [0x00, 0x00, 0x00],
-            system: flame_scene(),
-        },
-        SnapshotSpec {
-            name: "flame_24",
-            width: 600,
-            height: 600,
-            frames: NonZeroU32::new(24).expect("non-zero literal"),
-            background: [0x00, 0x00, 0x00],
-            system: flame_scene(),
-        },
-        SnapshotSpec {
-            name: "fog_08",
-            width: 600,
-            height: 600,
-            frames: NonZeroU32::new(8).expect("non-zero literal"),
-            background: [0x08, 0x10, 0x12],
-            system: fog_scene(),
-        },
-        SnapshotSpec {
-            name: "fog_24",
-            width: 600,
-            height: 600,
-            frames: NonZeroU32::new(24).expect("non-zero literal"),
+            frames: NonZeroU32::new(480).expect("non-zero literal"),
             background: [0x08, 0x10, 0x12],
             system: fog_scene(),
         },
@@ -229,7 +223,7 @@ fn run() {
             name: "explosion",
             width: 600,
             height: 600,
-            frames: NonZeroU32::new(8).expect("non-zero literal"),
+            frames: NonZeroU32::new(36).expect("non-zero literal"),
             background: [0x00, 0x00, 0x00],
             system: explosion_scene(),
         },
@@ -237,7 +231,7 @@ fn run() {
             name: "bounce_box",
             width: 600,
             height: 600,
-            frames: NonZeroU32::new(8).expect("non-zero literal"),
+            frames: NonZeroU32::new(180).expect("non-zero literal"),
             background: [0x06, 0x14, 0x1F],
             system: bounce_box_scene(),
         },

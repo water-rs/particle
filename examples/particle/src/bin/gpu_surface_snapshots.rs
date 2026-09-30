@@ -1,39 +1,73 @@
 use std::env;
 use std::fs;
+use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use particle_example::{explosion_system, flame_system, rain_system};
 use waterui::prelude::Environment;
-use waterui_graphics::offscreen::{OffscreenImage, OffscreenSize};
+use waterui_graphics::{
+    cherenkov::{ColorSpace, LinearDisplayP3, Readback, Srgb},
+    offscreen::{OffscreenImage, OffscreenSize},
+};
 use waterui_particle::ParticleSystem;
 
 struct SnapshotSpec {
     name: &'static str,
     width: u32,
     height: u32,
+    frames: NonZeroU32,
     background: [u8; 3],
     system: fn() -> ParticleSystem,
 }
 
-fn composite_over_opaque_background(pixels: &[u8], background: [u8; 3]) -> Vec<u8> {
-    pixels
-        .as_chunks::<4>()
-        .0
+/// Composites the premultiplied readback like the engine's presentation pass:
+/// source-over in linear Display P3, so additive blends saturate the same way
+/// they do on screen.
+fn composite_over_opaque_background(readback: &Readback, background: [u8; 3]) -> OffscreenImage {
+    let background = LinearDisplayP3::from_linear_srgb(Srgb::to_linear_srgb([
+        f32::from(background[0]) / 255.0,
+        f32::from(background[1]) / 255.0,
+        f32::from(background[2]) / 255.0,
+    ]));
+    let rgba8 = readback
+        .pixels
         .iter()
-        .flat_map(|pixel| {
-            let alpha = u16::from(pixel[3]);
-            let inv_alpha = 255_u16 - alpha;
-            let red = u16::from(pixel[0]) + (u16::from(background[0]) * inv_alpha + 127) / 255;
-            let green = u16::from(pixel[1]) + (u16::from(background[1]) * inv_alpha + 127) / 255;
-            let blue = u16::from(pixel[2]) + (u16::from(background[2]) * inv_alpha + 127) / 255;
-            [
-                red.min(255) as u8,
-                green.min(255) as u8,
-                blue.min(255) as u8,
-                255,
-            ]
+        .flat_map(|[red, green, blue, alpha]| {
+            let linear = LinearDisplayP3::to_linear_srgb([
+                red + (1.0 - alpha) * background[0],
+                green + (1.0 - alpha) * background[1],
+                blue + (1.0 - alpha) * background[2],
+            ]);
+            [encode(linear[0]), encode(linear[1]), encode(linear[2]), 255]
         })
-        .collect()
+        .collect();
+
+    OffscreenImage {
+        width: readback.width,
+        height: readback.height,
+        rgba8,
+    }
+}
+
+/// sRGB-encodes one linear channel.
+fn encode(linear: f32) -> u8 {
+    let clipped = linear.clamp(0.0, 1.0);
+    let encoded = if clipped <= 0.003_130_8 {
+        clipped * 12.92
+    } else {
+        1.055_f32.mul_add(clipped.powf(1.0 / 2.4), -0.055)
+    };
+    encode_channel(encoded)
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the value is clamped to [0, 255] before the cast"
+)]
+fn encode_channel(unit: f32) -> u8 {
+    (unit * 255.0).round() as u8
 }
 
 fn write_snapshot(output_dir: &Path, spec: SnapshotSpec) {
@@ -41,25 +75,14 @@ fn write_snapshot(output_dir: &Path, spec: SnapshotSpec) {
         .expect("snapshot frame size must be valid");
     let env = Environment::new();
     let output = (spec.system)()
-        .render_offscreen(
-            size,
-            &env,
-            core::num::NonZeroU32::MIN,
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        )
+        .render_offscreen(size, &env, spec.frames, Duration::from_secs_f64(1.0 / 60.0))
         .expect("particle snapshot render should succeed");
-    let output = OffscreenImage::from_readback(&output);
 
-    output
+    OffscreenImage::from_readback(&output)
         .save_png(output_dir.join(format!("{}.raw.png", spec.name)))
         .expect("raw particle png write should succeed");
 
-    let composited = OffscreenImage {
-        width: output.width,
-        height: output.height,
-        rgba8: composite_over_opaque_background(&output.premultiplied_rgba8(), spec.background),
-    };
-    composited
+    composite_over_opaque_background(&output, spec.background)
         .save_png(output_dir.join(format!("{}.png", spec.name)))
         .expect("composited particle png write should succeed");
 }
@@ -76,6 +99,7 @@ fn run() {
             name: "rain",
             width: 540,
             height: 960,
+            frames: NonZeroU32::new(72).expect("non-zero literal"),
             background: [0x0F, 0x17, 0x2A],
             system: rain_system,
         },
@@ -83,6 +107,7 @@ fn run() {
             name: "flame",
             width: 600,
             height: 600,
+            frames: NonZeroU32::new(60).expect("non-zero literal"),
             background: [0x00, 0x00, 0x00],
             system: flame_system,
         },
@@ -90,6 +115,7 @@ fn run() {
             name: "explosion",
             width: 600,
             height: 600,
+            frames: NonZeroU32::new(36).expect("non-zero literal"),
             background: [0x00, 0x00, 0x00],
             system: explosion_system,
         },
