@@ -99,7 +99,7 @@ fn run() {
             name: "rain",
             width: 540,
             height: 960,
-            frames: NonZeroU32::new(72).expect("non-zero literal"),
+            frames: NonZeroU32::new(54).expect("non-zero literal"),
             background: [0x0F, 0x17, 0x2A],
             system: rain_system,
         },
