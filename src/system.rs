@@ -311,6 +311,10 @@ impl ParticleSystem {
         self
     }
 
+    /// Seed for the private generator `render_offscreen` pins on the
+    /// emitter, so offscreen frames are reproducible across runs.
+    const OFFSCREEN_SEED: u64 = 0x5041_5254_4943_4C45;
+
     fn renderer(self, env: &Environment) -> (ParticleFeed, ParticleRenderer) {
         ParticleRenderer::reactive(self.max_particles, self.config, env)
     }
@@ -332,7 +336,8 @@ impl ParticleSystem {
         frame_count: NonZeroU32,
         frame_interval: Duration,
     ) -> Result<Readback, OffscreenError> {
-        let (feed, renderer) = self.renderer(env);
+        let (feed, mut renderer) = self.renderer(env);
+        renderer.pin_seed_stream(Self::OFFSCREEN_SEED);
         let runtime = pollster::block_on(GpuRuntime::new())
             .map_err(|error| OffscreenError::Engine(EngineError::Backend(error.to_string())))?;
         let engine = runtime.engine()?;
@@ -372,7 +377,8 @@ impl ParticleSystem {
         frame_count: NonZeroU32,
         frame_interval: Duration,
     ) -> Result<Readback, OffscreenError> {
-        let (feed, renderer) = self.renderer(env);
+        let (feed, mut renderer) = self.renderer(env);
+        renderer.pin_seed_stream(Self::OFFSCREEN_SEED);
         let runtime = GpuRuntime::new()
             .await
             .map_err(|error| OffscreenError::Engine(EngineError::Backend(error.to_string())))?;

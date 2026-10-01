@@ -10,7 +10,6 @@ use crate::{
     shaders::{COMPUTE_SHADER, RENDER_SHADER},
 };
 use encase::{ShaderSize, StorageBuffer};
-use num_traits::ToPrimitive;
 use shaderloom::{CompiledShader, CompiledShaderModule, ShaderStage};
 use std::mem::offset_of;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -108,13 +107,6 @@ impl ParticleFeed {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct InteractionGrid {
-    width: u32,
-    height: u32,
-    cell_count: u32,
-}
-
 const PARTICLE_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 8] = [
     wgpu::VertexAttribute {
         offset: offset_of!(GpuParticle, pos) as u64,
@@ -194,31 +186,6 @@ fn write_obstacles(queue: &wgpu::Queue, buffer: &wgpu::Buffer, obstacles: &[[f32
     queue.write_buffer(buffer, 0, collision_data.as_ref());
 }
 
-fn interaction_grid(config: &ResolvedParticleConfig) -> InteractionGrid {
-    if !config.interaction_enabled || config.interaction_radius <= 0.0 {
-        return InteractionGrid {
-            width: 1,
-            height: 1,
-            cell_count: 1,
-        };
-    }
-
-    let ideal_dim = f32_to_u32_ceil(1.0 / config.interaction_radius);
-    let max_dim = f32_to_u32_ceil(u32_to_f32(config.max_particles).sqrt().max(1.0));
-    let dim = ideal_dim.clamp(1, max_dim);
-
-    InteractionGrid {
-        width: dim,
-        height: dim,
-        cell_count: dim * dim,
-    }
-}
-
-fn max_interaction_grid_cells(max_particles: u32) -> u32 {
-    let dimension = f32_to_u32_ceil(u32_to_f32(max_particles).sqrt().max(1.0));
-    dimension * dimension
-}
-
 const fn particle_shape_code(shape: ParticleShape) -> u32 {
     match shape {
         ParticleShape::Circle => 0,
@@ -264,18 +231,15 @@ const fn blend_state(blend_mode: BlendMode) -> wgpu::BlendState {
 pub struct ParticleRenderer {
     updates: Receiver<ResolvedParticleConfig>,
     resolved_config: ResolvedParticleConfig,
-    clear_grid_pipeline: Option<wgpu::ComputePipeline>,
-    build_grid_pipeline: Option<wgpu::ComputePipeline>,
     simulate_pipeline: Option<wgpu::ComputePipeline>,
     render_pipeline: Option<wgpu::RenderPipeline>,
     particle_buffers: [Option<wgpu::Buffer>; 2],
     collision_buffer: Option<wgpu::Buffer>,
-    grid_heads_buffer: Option<wgpu::Buffer>,
-    particle_links_buffer: Option<wgpu::Buffer>,
     uniform_buffer: Option<wgpu::Buffer>,
     compute_bind_groups: [Option<wgpu::BindGroup>; 2],
     render_bind_group: Option<wgpu::BindGroup>,
     current_particle_buffer_index: usize,
+    seed_stream: Option<core::cell::RefCell<fastrand::Rng>>,
 }
 
 impl ParticleRenderer {
@@ -323,19 +287,22 @@ impl ParticleRenderer {
         Self {
             updates,
             resolved_config,
-            clear_grid_pipeline: None,
-            build_grid_pipeline: None,
             simulate_pipeline: None,
             render_pipeline: None,
             particle_buffers: std::array::from_fn(|_| None),
             collision_buffer: None,
-            grid_heads_buffer: None,
-            particle_links_buffer: None,
             uniform_buffer: None,
             compute_bind_groups: std::array::from_fn(|_| None),
             render_bind_group: None,
             current_particle_buffer_index: 0,
+            seed_stream: None,
         }
+    }
+
+    /// Pins the emitter's per-frame seed to a private generator, so renders
+    /// are reproducible instead of sharing the global RNG stream.
+    pub(crate) const fn pin_seed_stream(&mut self, seed: u64) {
+        self.seed_stream = Some(core::cell::RefCell::new(fastrand::Rng::with_seed(seed)));
     }
 
     const fn particle_buffer(&self, index: usize) -> &wgpu::Buffer {
@@ -365,12 +332,14 @@ impl ParticleRenderer {
             .expect("uniform buffer must exist before render");
         let time = elapsed.as_secs_f32();
         let dt = delta.as_secs_f32().min(0.1);
-        let grid = interaction_grid(config);
 
         let uniforms = Uniforms {
             time,
             dt,
-            seed: fastrand::u32(..),
+            seed: self
+                .seed_stream
+                .as_ref()
+                .map_or_else(|| fastrand::u32(..), |rng| rng.borrow_mut().u32(..)),
             max_particles: config.max_particles,
             gravity: config.gravity.into(),
             wind: config.wind.into(),
@@ -387,8 +356,6 @@ impl ParticleRenderer {
             softness: config.softness,
             interaction: InteractionUniforms::new(
                 config.interaction_enabled,
-                grid.width,
-                grid.height,
                 config.interaction_radius,
                 config.interaction_strength,
             ),
@@ -426,36 +393,7 @@ impl ParticleRenderer {
         config: &ResolvedParticleConfig,
     ) -> usize {
         let target_index = 1 - source_index;
-        let grid = interaction_grid(config);
         let bind_group = self.compute_bind_group(source_index);
-
-        {
-            let pipeline = self
-                .clear_grid_pipeline
-                .as_ref()
-                .expect("clear-grid pipeline must exist before render");
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Particle Clear Grid Pass"),
-                timestamp_writes: None,
-            });
-            cpass.set_pipeline(pipeline);
-            cpass.set_bind_group(0, bind_group, &[]);
-            cpass.dispatch_workgroups(grid.cell_count.div_ceil(64), 1, 1);
-        }
-
-        {
-            let pipeline = self
-                .build_grid_pipeline
-                .as_ref()
-                .expect("build-grid pipeline must exist before render");
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Particle Build Grid Pass"),
-                timestamp_writes: None,
-            });
-            cpass.set_pipeline(pipeline);
-            cpass.set_bind_group(0, bind_group, &[]);
-            cpass.dispatch_workgroups(config.max_particles.div_ceil(64), 1, 1);
-        }
 
         {
             let pipeline = self
@@ -535,12 +473,6 @@ impl GpuContent for ParticleRenderer {
         let buffer_size = particle_size * u64::from(config.max_particles);
         let collision_stride = <GpuCircleObstacle as ShaderSize>::SHADER_SIZE.get();
         let collision_count = config.collision_circle_obstacles.len().max(1);
-        let u32_size = u64::try_from(core::mem::size_of::<u32>())
-            .expect("u32 size must fit into wgpu's u64 buffer addressing");
-        let grid_heads_size =
-            u64::from(max_interaction_grid_cells(config.max_particles)) * u32_size;
-        let particle_links_size = u64::from(config.max_particles) * u32_size;
-
         let particle_buffers = std::array::from_fn(|index| {
             let buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(match index {
@@ -578,25 +510,6 @@ impl GpuContent for ParticleRenderer {
             &collision_buffer,
             &config.collision_circle_obstacles,
         );
-        let grid_heads_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Interaction Grid Heads"),
-            size: grid_heads_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: true,
-        });
-        fill_mapped_buffer(&grid_heads_buffer, 0xff);
-        let particle_links_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Interaction Links"),
-            size: particle_links_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: true,
-        });
-        fill_mapped_buffer(&particle_links_buffer, 0xff);
-
-        let clear_grid_shader =
-            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "clear_grid");
-        let build_grid_shader =
-            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "build_grid");
         let simulate_shader =
             COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "simulate_particles");
         let compute_bind_group_layout =
@@ -608,24 +521,6 @@ impl GpuContent for ParticleRenderer {
                 immediate_size: 0,
             });
         let compute_pipeline_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let clear_grid_pipeline =
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Particle Clear Grid Pipeline"),
-                layout: Some(&compute_pipeline_layout),
-                module: clear_grid_shader.module(),
-                entry_point: Some(clear_grid_shader.entry_point()),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            });
-        let build_grid_pipeline =
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Particle Build Grid Pipeline"),
-                layout: Some(&compute_pipeline_layout),
-                module: build_grid_shader.module(),
-                entry_point: Some(build_grid_shader.entry_point()),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            });
         let simulate_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Particle Simulate Pipeline"),
             layout: Some(&compute_pipeline_layout),
@@ -670,14 +565,6 @@ impl GpuContent for ParticleRenderer {
                         wgpu::BindGroupEntry {
                             binding: 3,
                             resource: collision_buffer.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 4,
-                            resource: grid_heads_buffer.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 5,
-                            resource: particle_links_buffer.as_entire_binding(),
                         },
                     ],
                 }),
@@ -743,11 +630,7 @@ impl GpuContent for ParticleRenderer {
 
         self.particle_buffers = particle_buffers;
         self.collision_buffer = Some(collision_buffer);
-        self.grid_heads_buffer = Some(grid_heads_buffer);
-        self.particle_links_buffer = Some(particle_links_buffer);
         self.uniform_buffer = Some(uniform_buffer);
-        self.clear_grid_pipeline = Some(clear_grid_pipeline);
-        self.build_grid_pipeline = Some(build_grid_pipeline);
         self.simulate_pipeline = Some(simulate_pipeline);
         self.render_pipeline = Some(render_pipeline);
         self.compute_bind_groups = compute_bind_groups;
@@ -823,19 +706,6 @@ impl GpuContent for ParticleRenderer {
         self.current_particle_buffer_index = render_buffer_index;
         frame.request_redraw();
     }
-}
-
-fn f32_to_u32_ceil(value: f32) -> u32 {
-    value
-        .ceil()
-        .to_u32()
-        .expect("particle dimension must be representable as u32")
-}
-
-fn u32_to_f32(value: u32) -> f32 {
-    value
-        .to_f32()
-        .expect("particle count must be representable as f32")
 }
 
 #[cfg(test)]
@@ -1380,7 +1250,7 @@ mod tests {
         let uniforms = Uniforms {
             dt: 0.1,
             max_particles: 2,
-            interaction: InteractionUniforms::new(true, 2, 2, 0.02, 20.0),
+            interaction: InteractionUniforms::new(true, 0.02, 20.0),
             size_range: ShaderVec2::new(0.02, 0.02),
             color_start: ShaderVec4::ONE,
             color_end: ShaderVec4::ONE,
