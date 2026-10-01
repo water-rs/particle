@@ -12,7 +12,7 @@ use num_traits::ToPrimitive;
 use shaderloom::ShaderStage;
 use std::mem::offset_of;
 use std::sync::mpsc::{self, Receiver, Sender};
-use waterui_core::{Computed, Environment, Signal, flatten_signal};
+use waterui_core::{Computed, Environment, Signal, SignalExt, flatten_signal};
 use waterui_graphics::{
     color::WorkingColor,
     gpu::{Context, Frame, GpuContent},
@@ -50,7 +50,7 @@ pub struct ResolvedParticleConfig {
     pub shape: ParticleShape,
 }
 
-pub(crate) struct ParticleFeed {
+pub struct ParticleFeed {
     max_particles: u32,
     config: ParticleConfig,
     color_start: Computed<WorkingColor>,
@@ -169,7 +169,7 @@ const fn encode_emitter_size(shape: EmitterShape) -> Vec2 {
     }
 }
 
-fn resolved_linear_color(color: WorkingColor) -> Vec4 {
+const fn resolved_linear_color(color: WorkingColor) -> Vec4 {
     Vec4::from_array(color.components)
 }
 
@@ -473,7 +473,10 @@ impl ParticleRenderer {
 }
 
 fn fill_mapped_buffer(buffer: &wgpu::Buffer, value: u8) {
-    let mut mapped = buffer.slice(..).get_mapped_range_mut();
+    let mut mapped = buffer
+        .slice(..)
+        .get_mapped_range_mut()
+        .expect("buffer was created with mapped_at_creation");
     mapped.slice(..).fill(value);
     drop(mapped);
     buffer.unmap();
@@ -648,7 +651,7 @@ impl GpuContent for ParticleRenderer {
             vertex: wgpu::VertexState {
                 module: vertex_shader.module(),
                 entry_point: Some(vertex_shader.entry_point()),
-                buffers: &[particle_vertex_layout()],
+                buffers: &[Some(particle_vertex_layout())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -792,18 +795,18 @@ mod tests {
     use waterui_core::{Binding, Environment, SignalExt};
     use waterui_graphics::{
         color::WorkingColor,
-        gpu::{Context, Frame, GpuContent, GpuRuntime, RedrawHandle},
+        gpu::{Context, Frame, GpuContent, GpuRuntime, RedrawHandle, SharedGpuContext},
     };
 
     fn test_gpu_runtime() -> GpuRuntime {
         pollster::block_on(GpuRuntime::new()).expect("particle GPU tests require a working runtime")
     }
 
-    fn test_gpu_context(runtime: &GpuRuntime) -> Context<'_> {
+    fn test_gpu_context(shared: &SharedGpuContext) -> Context<'_> {
         Context {
-            adapter: runtime.adapter(),
-            device: runtime.device(),
-            queue: runtime.queue(),
+            adapter: shared.adapter(),
+            device: shared.device(),
+            queue: shared.queue(),
             format: wgpu::TextureFormat::Rgba16Float,
             redraw: RedrawHandle::new(|| {}),
         }
@@ -882,17 +885,20 @@ mod tests {
         );
         ctx.queue.submit([encoder.finish()]);
 
-        let slice = readback.slice(..);
         let (tx, rx) = mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
+        readback.map_async(wgpu::MapMode::Read, .., move |result| {
             let _ = tx.send(result);
         });
-        let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
+        ctx.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("particle compute readback completes");
         rx.recv()
             .expect("particle compute readback callback dropped")
             .expect("particle compute readback mapping failed");
 
-        let mapped = slice.get_mapped_range();
+        let mapped = readback
+            .get_mapped_range(..)
+            .expect("particle compute readback range is mapped");
         let bytes = mapped.to_vec();
         drop(mapped);
         readback.unmap();
@@ -1020,7 +1026,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         renderer.setup(&ctx);
         let config = renderer.resolved_config.clone();
         renderer.update_uniforms(
@@ -1080,7 +1087,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         renderer.setup(&ctx);
 
         let mut particle = GpuParticle::default();
@@ -1159,7 +1167,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         renderer.setup(&ctx);
 
         let mut particle = GpuParticle::default();
@@ -1236,7 +1245,8 @@ mod tests {
         });
 
         let runtime = test_gpu_runtime();
-        let ctx = test_gpu_context(&runtime);
+        let shared = runtime.context();
+        let ctx = test_gpu_context(&shared);
         renderer.setup(&ctx);
 
         let mut first = GpuParticle::default();
