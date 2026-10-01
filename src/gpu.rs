@@ -68,14 +68,14 @@ impl ShaderVec2 {
     }
 
     /// Returns the `x` component.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     #[must_use]
     pub const fn x(self) -> f32 {
         self.0[0]
     }
 
     /// Returns the `y` component.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     #[must_use]
     pub const fn y(self) -> f32 {
         self.0[1]

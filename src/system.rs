@@ -6,13 +6,12 @@ use crate::{
     renderer::{ParticleFeed, ParticleRenderer},
 };
 use core::num::NonZeroU32;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use waterui_core::{Computed, Environment, IntoSignal, IntoSignalF32, SignalExt, View};
 use waterui_graphics::{
-    cherenkov::{Engine, FrameTime, Offscreen, OffscreenFormat, Readback},
-    cherenkov_gpu::{Gpu, GpuConfig},
+    cherenkov::{EngineError, FrameTime, Instant, Offscreen, OffscreenFormat, Readback},
     color::Color,
-    gpu::GpuContentView,
+    gpu::{GpuContentView, GpuRuntime},
     offscreen::{OffscreenError, OffscreenSize},
 };
 
@@ -316,7 +315,8 @@ impl ParticleSystem {
         ParticleRenderer::reactive(self.max_particles, self.config, env)
     }
 
-    /// Simulates frames on an engine-owned device and reads premultiplied linear Display P3 pixels.
+    /// Renders the particle system into an offscreen HDR target for `frame_count` frames,
+    /// simulating on a device shared through [`GpuRuntime`].
     ///
     /// An initial frame sets up the simulation, then `frame_count` steps advance it.
     /// The caller supplies the simulation interval; no wall-clock waiting is required.
@@ -324,6 +324,7 @@ impl ParticleSystem {
     ///
     /// # Errors
     /// Returns engine initialization, surface creation, rendering, or readback errors.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn render_offscreen(
         self,
         size: OffscreenSize,
@@ -332,7 +333,9 @@ impl ParticleSystem {
         frame_interval: Duration,
     ) -> Result<Readback, OffscreenError> {
         let (feed, renderer) = self.renderer(env);
-        let engine = Engine::<Gpu>::new(GpuConfig::default())?;
+        let runtime = pollster::block_on(GpuRuntime::new())
+            .map_err(|error| OffscreenError::Engine(EngineError::Backend(error.to_string())))?;
+        let engine = runtime.engine()?;
         let pixels = (size.width(), size.height());
         let surface = engine.surface(Offscreen::new(pixels, OffscreenFormat::LinearF16))?;
         let content = GpuContentView::new(renderer).take_engine_content(|| {});
@@ -346,6 +349,51 @@ impl ParticleSystem {
             engine.render(FrameTime::at(start + frame_interval * frame))?;
         }
         Ok(surface.readback()?)
+    }
+
+    /// Renders the particle system into an offscreen HDR target for `frame_count` frames,
+    /// simulating on a device shared through [`GpuRuntime`].
+    ///
+    /// An initial frame sets up the simulation, then `frame_count` steps advance it.
+    /// The caller supplies the simulation interval; no wall-clock waiting is required.
+    /// Convert the returned HDR pixels with `OffscreenImage::from_readback` for an SDR export.
+    ///
+    /// # Errors
+    /// Returns engine initialization, surface creation, rendering, or readback errors.
+    #[cfg(target_arch = "wasm32")]
+    #[allow(
+        clippy::future_not_send,
+        reason = "the engine's wasm32 API is !Send by design and every future executes on the browser's single-threaded executor"
+    )]
+    pub async fn render_offscreen(
+        self,
+        size: OffscreenSize,
+        env: &Environment,
+        frame_count: NonZeroU32,
+        frame_interval: Duration,
+    ) -> Result<Readback, OffscreenError> {
+        let (feed, renderer) = self.renderer(env);
+        let runtime = GpuRuntime::new()
+            .await
+            .map_err(|error| OffscreenError::Engine(EngineError::Backend(error.to_string())))?;
+        let engine = runtime.engine().await?;
+        let pixels = (size.width(), size.height());
+        let surface = engine
+            .surface(Offscreen::new(pixels, OffscreenFormat::LinearF16))
+            .await?;
+        let content = GpuContentView::new(renderer).take_engine_content(|| {});
+        surface.update(|tx| {
+            tx[surface.root()].content(engine.gpu_content(pixels, content));
+        });
+        let start = Instant::now();
+        engine.render(FrameTime::at(start)).await?;
+        for frame in 1..=frame_count.get() {
+            feed.pump();
+            engine
+                .render(FrameTime::at(start + frame_interval * frame))
+                .await?;
+        }
+        Ok(surface.readback().await?)
     }
 }
 

@@ -280,7 +280,7 @@ pub struct ParticleRenderer {
 
 impl ParticleRenderer {
     /// Creates a renderer from a resolved test fixture.
-    #[cfg(test)]
+    #[cfg(all(test, not(target_arch = "wasm32")))]
     pub fn new(config: ResolvedParticleConfig) -> Self {
         Self::with_config(config, mpsc::channel().1)
     }
@@ -840,75 +840,60 @@ fn u32_to_f32(value: u32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ParticleRenderer, ResolvedParticleConfig, blend_state, encode_emitter_size,
-        resolved_linear_color,
-    };
+    #[cfg(not(target_arch = "wasm32"))]
+    use super::ResolvedParticleConfig;
+    use super::{ParticleRenderer, blend_state, encode_emitter_size, resolved_linear_color};
     use crate::{
-        EmitterShape, ParticleShape,
+        EmitterShape,
         config::{BlendMode, ParticleConfig},
-        gpu::{
-            CollisionUniforms, GpuParticle, InteractionUniforms, ShaderVec2, ShaderVec4, Uniforms,
-        },
+        gpu::{ShaderVec2, ShaderVec4},
     };
+    #[cfg(not(target_arch = "wasm32"))]
+    use crate::{
+        ParticleShape,
+        gpu::{CollisionUniforms, GpuParticle, InteractionUniforms, Uniforms},
+    };
+    #[cfg(not(target_arch = "wasm32"))]
     use encase::{ShaderSize, StorageBuffer};
     use waterui_core::{Binding, Environment, SignalExt};
+    #[cfg(not(target_arch = "wasm32"))]
     use waterui_graphics::{
-        cherenkov::{Engine, FrameTime, Offscreen, OffscreenFormat},
-        cherenkov_gpu::{Gpu, GpuConfig},
-        color::WorkingColor,
-        gpu::{Context, Frame, GpuContent, GpuContentView, RedrawHandle},
+        cherenkov::{FrameTime, Offscreen, OffscreenFormat},
+        gpu::{
+            Context, Frame, GpuContent, GpuContentView, GpuRuntime, RedrawHandle, SharedGpuContext,
+        },
         offscreen::OffscreenImage,
-        wgpu,
     };
+    use waterui_graphics::{color::WorkingColor, wgpu};
 
-    /// Device owned by the test so it can request the features the shaders need.
-    struct TestGpu {
-        adapter: wgpu::Adapter,
-        device: wgpu::Device,
-        queue: wgpu::Queue,
+    /// The shared runtime's context: the shared device requests the features
+    /// the shaderloom passthrough modules and cherenkov both need.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_gpu() -> std::sync::Arc<SharedGpuContext> {
+        pollster::block_on(GpuRuntime::new())
+            .expect("particle GPU tests require a GPU runtime")
+            .context()
     }
 
-    fn test_gpu() -> TestGpu {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            force_fallback_adapter: false,
-            compatible_surface: None,
-            apply_limit_buckets: false,
-        }))
-        .expect("particle GPU tests require a GPU adapter");
-        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("Particle Test Device"),
-            required_features: shaderloom::required_features(adapter.features())
-                | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM,
-            ..Default::default()
-        }))
-        .expect("particle GPU tests require a GPU device");
-        TestGpu {
-            adapter,
-            device,
-            queue,
-        }
-    }
-
-    fn test_gpu_context(gpu: &TestGpu) -> Context<'_> {
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_gpu_context(gpu: &SharedGpuContext) -> Context<'_> {
         Context {
-            adapter: &gpu.adapter,
-            device: &gpu.device,
-            queue: &gpu.queue,
+            adapter: gpu.adapter(),
+            device: gpu.device(),
+            queue: gpu.queue(),
             format: wgpu::TextureFormat::Rgba16Float,
             redraw: RedrawHandle::new(|| {}),
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn opaque_white() -> WorkingColor {
         WorkingColor {
             components: [1.0; 4],
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn particle_test_config(max_particles: u32) -> ResolvedParticleConfig {
         ResolvedParticleConfig {
             max_particles,
@@ -941,6 +926,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn simulate_and_read_particles(
         renderer: &ParticleRenderer,
         ctx: &Context<'_>,
@@ -1042,6 +1028,7 @@ mod tests {
         assert!((updated.emit_rate - 240.0).abs() < f32::EPSILON);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn render_pass_draws_when_particle_buffer_is_prefilled() {
         use waterui_graphics::offscreen::OffscreenSize;
@@ -1091,7 +1078,9 @@ mod tests {
         };
 
         let size = OffscreenSize::try_from_pixels(256, 256).expect("test size must be valid");
-        let engine = Engine::<Gpu>::new(GpuConfig::default()).expect("GPU test requires an engine");
+        let runtime =
+            pollster::block_on(GpuRuntime::new()).expect("GPU test requires a GPU runtime");
+        let engine = runtime.engine().expect("GPU test requires an engine");
         let pixels = (size.width(), size.height());
         let surface = engine
             .surface(Offscreen::new(pixels, OffscreenFormat::LinearF16))
@@ -1121,6 +1110,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn compute_pass_writes_live_particles_to_storage_buffer() {
         let mut renderer = ParticleRenderer::new(ResolvedParticleConfig {
@@ -1181,6 +1171,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn compute_pass_applies_bounds_collision_on_gpu() {
         let mut renderer = ParticleRenderer::new(ResolvedParticleConfig {
@@ -1267,6 +1258,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn compute_pass_applies_circle_obstacle_collision_on_gpu() {
         let mut renderer = ParticleRenderer::new(ResolvedParticleConfig {
@@ -1350,6 +1342,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn compute_pass_applies_particle_neighbor_interaction_on_gpu() {
         let mut renderer = ParticleRenderer::new(ResolvedParticleConfig {
