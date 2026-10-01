@@ -4164,6 +4164,7 @@ dependencies = [
  "bytemuck",
  "encase",
  "fastrand",
+ "num-traits",
  "pollster 0.4.0",
  "shaderloom",
  "waterui",

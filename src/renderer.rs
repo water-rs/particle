@@ -10,6 +10,7 @@ use crate::{
     shaders::{COMPUTE_SHADER, RENDER_SHADER},
 };
 use encase::{ShaderSize, StorageBuffer};
+use num_traits::ToPrimitive;
 use shaderloom::{CompiledShader, CompiledShaderModule, ShaderStage};
 use std::mem::offset_of;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -107,6 +108,13 @@ impl ParticleFeed {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct InteractionGrid {
+    width: u32,
+    height: u32,
+    cell_count: u32,
+}
+
 const PARTICLE_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 8] = [
     wgpu::VertexAttribute {
         offset: offset_of!(GpuParticle, pos) as u64,
@@ -186,6 +194,31 @@ fn write_obstacles(queue: &wgpu::Queue, buffer: &wgpu::Buffer, obstacles: &[[f32
     queue.write_buffer(buffer, 0, collision_data.as_ref());
 }
 
+fn interaction_grid(config: &ResolvedParticleConfig) -> InteractionGrid {
+    if !config.interaction_enabled || config.interaction_radius <= 0.0 {
+        return InteractionGrid {
+            width: 1,
+            height: 1,
+            cell_count: 1,
+        };
+    }
+
+    let ideal_dim = f32_to_u32_ceil(1.0 / config.interaction_radius);
+    let max_dim = f32_to_u32_ceil(u32_to_f32(config.max_particles).sqrt().max(1.0));
+    let dim = ideal_dim.clamp(1, max_dim);
+
+    InteractionGrid {
+        width: dim,
+        height: dim,
+        cell_count: dim * dim,
+    }
+}
+
+fn max_interaction_grid_cells(max_particles: u32) -> u32 {
+    let dimension = f32_to_u32_ceil(u32_to_f32(max_particles).sqrt().max(1.0));
+    dimension * dimension
+}
+
 const fn particle_shape_code(shape: ParticleShape) -> u32 {
     match shape {
         ParticleShape::Circle => 0,
@@ -231,10 +264,19 @@ const fn blend_state(blend_mode: BlendMode) -> wgpu::BlendState {
 pub struct ParticleRenderer {
     updates: Receiver<ResolvedParticleConfig>,
     resolved_config: ResolvedParticleConfig,
+    clear_grid_pipeline: Option<wgpu::ComputePipeline>,
+    count_grid_pipeline: Option<wgpu::ComputePipeline>,
+    prefix_grid_pipeline: Option<wgpu::ComputePipeline>,
+    scatter_grid_pipeline: Option<wgpu::ComputePipeline>,
+    sort_grid_pipeline: Option<wgpu::ComputePipeline>,
     simulate_pipeline: Option<wgpu::ComputePipeline>,
     render_pipeline: Option<wgpu::RenderPipeline>,
     particle_buffers: [Option<wgpu::Buffer>; 2],
     collision_buffer: Option<wgpu::Buffer>,
+    cell_counts_buffer: Option<wgpu::Buffer>,
+    cell_offsets_buffer: Option<wgpu::Buffer>,
+    cell_cursors_buffer: Option<wgpu::Buffer>,
+    particle_links_buffer: Option<wgpu::Buffer>,
     uniform_buffer: Option<wgpu::Buffer>,
     compute_bind_groups: [Option<wgpu::BindGroup>; 2],
     render_bind_group: Option<wgpu::BindGroup>,
@@ -287,10 +329,19 @@ impl ParticleRenderer {
         Self {
             updates,
             resolved_config,
+            clear_grid_pipeline: None,
+            count_grid_pipeline: None,
+            prefix_grid_pipeline: None,
+            scatter_grid_pipeline: None,
+            sort_grid_pipeline: None,
             simulate_pipeline: None,
             render_pipeline: None,
             particle_buffers: std::array::from_fn(|_| None),
             collision_buffer: None,
+            cell_counts_buffer: None,
+            cell_offsets_buffer: None,
+            cell_cursors_buffer: None,
+            particle_links_buffer: None,
             uniform_buffer: None,
             compute_bind_groups: std::array::from_fn(|_| None),
             render_bind_group: None,
@@ -332,6 +383,7 @@ impl ParticleRenderer {
             .expect("uniform buffer must exist before render");
         let time = elapsed.as_secs_f32();
         let dt = delta.as_secs_f32().min(0.1);
+        let grid = interaction_grid(config);
 
         let uniforms = Uniforms {
             time,
@@ -356,6 +408,8 @@ impl ParticleRenderer {
             softness: config.softness,
             interaction: InteractionUniforms::new(
                 config.interaction_enabled,
+                grid.width,
+                grid.height,
                 config.interaction_radius,
                 config.interaction_strength,
             ),
@@ -393,7 +447,54 @@ impl ParticleRenderer {
         config: &ResolvedParticleConfig,
     ) -> usize {
         let target_index = 1 - source_index;
+        let grid = interaction_grid(config);
         let bind_group = self.compute_bind_group(source_index);
+
+        for (pipeline, label, workgroups) in [
+            (
+                self.clear_grid_pipeline
+                    .as_ref()
+                    .expect("clear-grid pipeline must exist before render"),
+                "Particle Clear Grid Pass",
+                grid.cell_count.div_ceil(64),
+            ),
+            (
+                self.count_grid_pipeline
+                    .as_ref()
+                    .expect("count-grid pipeline must exist before render"),
+                "Particle Count Grid Pass",
+                config.max_particles.div_ceil(64),
+            ),
+            (
+                self.prefix_grid_pipeline
+                    .as_ref()
+                    .expect("prefix-grid pipeline must exist before render"),
+                "Particle Prefix Grid Pass",
+                1,
+            ),
+            (
+                self.scatter_grid_pipeline
+                    .as_ref()
+                    .expect("scatter-grid pipeline must exist before render"),
+                "Particle Scatter Grid Pass",
+                config.max_particles.div_ceil(64),
+            ),
+            (
+                self.sort_grid_pipeline
+                    .as_ref()
+                    .expect("sort-grid pipeline must exist before render"),
+                "Particle Sort Grid Pass",
+                grid.cell_count.div_ceil(64),
+            ),
+        ] {
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some(label),
+                timestamp_writes: None,
+            });
+            cpass.set_pipeline(pipeline);
+            cpass.set_bind_group(0, bind_group, &[]);
+            cpass.dispatch_workgroups(workgroups, 1, 1);
+        }
 
         {
             let pipeline = self
@@ -510,6 +611,50 @@ impl GpuContent for ParticleRenderer {
             &collision_buffer,
             &config.collision_circle_obstacles,
         );
+
+        let u32_size = u64::try_from(core::mem::size_of::<u32>())
+            .expect("u32 size must fit into wgpu's u64 buffer addressing");
+        let grid_cells_size =
+            u64::from(max_interaction_grid_cells(config.max_particles)) * u32_size;
+        let cell_counts_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Interaction Cell Counts"),
+            size: grid_cells_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: true,
+        });
+        fill_mapped_buffer(&cell_counts_buffer, 0);
+        let cell_offsets_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Interaction Cell Offsets"),
+            size: grid_cells_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: true,
+        });
+        fill_mapped_buffer(&cell_offsets_buffer, 0);
+        let cell_cursors_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Interaction Cell Cursors"),
+            size: grid_cells_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: true,
+        });
+        fill_mapped_buffer(&cell_cursors_buffer, 0);
+        let particle_links_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Interaction Links"),
+            size: u64::from(config.max_particles) * u32_size,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: true,
+        });
+        fill_mapped_buffer(&particle_links_buffer, 0);
+
+        let clear_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "clear_grid");
+        let count_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "count_grid");
+        let prefix_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "prefix_grid");
+        let scatter_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "scatter_grid");
+        let sort_grid_shader =
+            COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "sort_grid");
         let simulate_shader =
             COMPUTE_SHADER.create_entry_point(device, ShaderStage::Compute, "simulate_particles");
         let compute_bind_group_layout =
@@ -521,6 +666,26 @@ impl GpuContent for ParticleRenderer {
                 immediate_size: 0,
             });
         let compute_pipeline_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let make_grid_pipeline = |shader: &CompiledShaderModule, label: &str| {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(label),
+                layout: Some(&compute_pipeline_layout),
+                module: shader.module(),
+                entry_point: Some(shader.entry_point()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            })
+        };
+        let clear_grid_pipeline =
+            make_grid_pipeline(&clear_grid_shader, "Particle Clear Grid Pipeline");
+        let count_grid_pipeline =
+            make_grid_pipeline(&count_grid_shader, "Particle Count Grid Pipeline");
+        let prefix_grid_pipeline =
+            make_grid_pipeline(&prefix_grid_shader, "Particle Prefix Grid Pipeline");
+        let scatter_grid_pipeline =
+            make_grid_pipeline(&scatter_grid_shader, "Particle Scatter Grid Pipeline");
+        let sort_grid_pipeline =
+            make_grid_pipeline(&sort_grid_shader, "Particle Sort Grid Pipeline");
         let simulate_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("Particle Simulate Pipeline"),
             layout: Some(&compute_pipeline_layout),
@@ -565,6 +730,22 @@ impl GpuContent for ParticleRenderer {
                         wgpu::BindGroupEntry {
                             binding: 3,
                             resource: collision_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: cell_counts_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 5,
+                            resource: cell_offsets_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 6,
+                            resource: cell_cursors_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 7,
+                            resource: particle_links_buffer.as_entire_binding(),
                         },
                     ],
                 }),
@@ -630,7 +811,16 @@ impl GpuContent for ParticleRenderer {
 
         self.particle_buffers = particle_buffers;
         self.collision_buffer = Some(collision_buffer);
+        self.cell_counts_buffer = Some(cell_counts_buffer);
+        self.cell_offsets_buffer = Some(cell_offsets_buffer);
+        self.cell_cursors_buffer = Some(cell_cursors_buffer);
+        self.particle_links_buffer = Some(particle_links_buffer);
         self.uniform_buffer = Some(uniform_buffer);
+        self.clear_grid_pipeline = Some(clear_grid_pipeline);
+        self.count_grid_pipeline = Some(count_grid_pipeline);
+        self.prefix_grid_pipeline = Some(prefix_grid_pipeline);
+        self.scatter_grid_pipeline = Some(scatter_grid_pipeline);
+        self.sort_grid_pipeline = Some(sort_grid_pipeline);
         self.simulate_pipeline = Some(simulate_pipeline);
         self.render_pipeline = Some(render_pipeline);
         self.compute_bind_groups = compute_bind_groups;
@@ -706,6 +896,19 @@ impl GpuContent for ParticleRenderer {
         self.current_particle_buffer_index = render_buffer_index;
         frame.request_redraw();
     }
+}
+
+fn f32_to_u32_ceil(value: f32) -> u32 {
+    value
+        .ceil()
+        .to_u32()
+        .expect("particle dimension must be representable as u32")
+}
+
+fn u32_to_f32(value: u32) -> f32 {
+    value
+        .to_f32()
+        .expect("particle count must be representable as f32")
 }
 
 #[cfg(test)]
@@ -1250,7 +1453,7 @@ mod tests {
         let uniforms = Uniforms {
             dt: 0.1,
             max_particles: 2,
-            interaction: InteractionUniforms::new(true, 0.02, 20.0),
+            interaction: InteractionUniforms::new(true, 2, 2, 0.02, 20.0),
             size_range: ShaderVec2::new(0.02, 0.02),
             color_start: ShaderVec4::ONE,
             color_end: ShaderVec4::ONE,
@@ -1290,5 +1493,118 @@ mod tests {
             "second particle should be pushed right, got {}",
             second_updated.vel.x()
         );
+    }
+
+    /// A standalone device for the benchmark; Metal in this VM exposes no
+    /// timestamp counters, so submission-to-completion wall time is measured
+    /// instead of query-set deltas.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn benchmark_gpu() -> (wgpu::Adapter, wgpu::Device, wgpu::Queue) {
+        let instance =
+            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            ..wgpu::RequestAdapterOptions::default()
+        }))
+        .expect("interaction benchmark requires a GPU adapter");
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            required_features: shaderloom::required_features(adapter.features()),
+            ..wgpu::DeviceDescriptor::default()
+        }))
+        .expect("interaction benchmark requires a device");
+        (adapter, device, queue)
+    }
+
+    /// Median GPU time of the simulation passes over eight frames, in
+    /// nanoseconds, with every particle alive and spread over the viewport.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn simulation_pass_gpu_ns(
+        adapter: &wgpu::Adapter,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        particle_count: u32,
+    ) -> f64 {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let (_sender, receiver) = mpsc::channel();
+        let config = ResolvedParticleConfig {
+            interaction_enabled: true,
+            interaction_radius: 0.01,
+            interaction_strength: 16.0,
+            life_range: [1.0e9, 1.0e9],
+            ..particle_test_config(particle_count)
+        };
+        let mut renderer = ParticleRenderer::with_config(config.clone(), receiver);
+        let ctx = Context {
+            adapter,
+            device,
+            queue,
+            format: wgpu::TextureFormat::Rgba16Float,
+            redraw: RedrawHandle::new(|| {}),
+        };
+        renderer.setup(&ctx);
+
+        let row_count = particle_count / 1024;
+        let particles: Vec<GpuParticle> = (0..particle_count)
+            .map(|index| {
+                let mut particle = GpuParticle::default();
+                let x = super::u32_to_f32(index % 1024) / 1023.0;
+                let y = super::u32_to_f32(index / 1024) / super::u32_to_f32(row_count);
+                particle.pos = ShaderVec2::new(0.96f32.mul_add(x, 0.02), 0.96f32.mul_add(y, 0.02));
+                particle.life = 1.0e9;
+                particle.max_life = 1.0e9;
+                particle.size = 0.006;
+                particle.color = ShaderVec4::ONE;
+                particle
+            })
+            .collect();
+        let mut particle_data = StorageBuffer::new(Vec::new());
+        particle_data
+            .write(&particles)
+            .expect("benchmark particle encoding must succeed");
+        queue.write_buffer(renderer.particle_buffer(0), 0, particle_data.as_ref());
+
+        let mut source_index = 0;
+        let mut samples = Vec::new();
+        for frame in 0..8u32 {
+            renderer.update_uniforms(
+                &config,
+                queue,
+                600,
+                600,
+                Duration::from_secs_f64(f64::from(frame) / 60.0),
+                Duration::from_secs_f64(1.0 / 60.0),
+            );
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("interaction benchmark encoder"),
+            });
+            let target_index =
+                renderer.encode_simulation_passes(&mut encoder, source_index, &config);
+            let submitted = std::time::Instant::now();
+            queue.submit([encoder.finish()]);
+            let _ = device.poll(wgpu::PollType::wait_indefinitely());
+            source_index = target_index;
+            samples.push(submitted.elapsed());
+        }
+        samples.sort();
+        samples[samples.len() / 2].as_secs_f64() * 1.0e9
+    }
+
+    /// Manual benchmark: `cargo test interaction_gpu_time -- --ignored --nocapture`.
+    /// Reports the GPU time of the simulation passes (interaction grid build,
+    // neighbor impulses and integration) per frame at two particle counts.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    #[ignore = "manual GPU benchmark"]
+    fn interaction_gpu_time_scales_with_neighbors() {
+        let (adapter, device, queue) = benchmark_gpu();
+        for &particle_count in &[6_000_u32, 24_000] {
+            let median_ns = simulation_pass_gpu_ns(&adapter, &device, &queue, particle_count);
+            println!(
+                "simulation passes at {particle_count} particles: {:.3} ms GPU",
+                median_ns / 1.0e6
+            );
+        }
     }
 }

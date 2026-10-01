@@ -14,6 +14,8 @@ struct Particle {
 
 struct InteractionUniforms {
     enabled: u32,
+    grid_width: u32,
+    grid_height: u32,
     radius: f32,
     strength: f32,
 }
@@ -63,6 +65,10 @@ struct Uniforms {
 @group(0) @binding(1) var<storage, read> particle_source: array<Particle>;
 @group(0) @binding(2) var<storage, read_write> particle_target: array<Particle>;
 @group(0) @binding(3) var<storage, read> circle_obstacles: array<CircleObstacle>;
+@group(0) @binding(4) var<storage, read_write> cell_counts: array<atomic<u32>>;
+@group(0) @binding(5) var<storage, read_write> cell_offsets: array<u32>;
+@group(0) @binding(6) var<storage, read_write> cell_cursors: array<atomic<u32>>;
+@group(0) @binding(7) var<storage, read_write> particle_links: array<u32>;
 
 const TAU: f32 = 6.283185307179586;
 
@@ -98,6 +104,15 @@ fn sample_emitter_offset(seed: ptr<function, u32>) -> vec2<f32> {
     return vec2<f32>(cos(angle), sin(angle)) * radius;
 }
 
+fn grid_cell_index(position: vec2<f32>) -> u32 {
+    let clamped = clamp(position, vec2<f32>(0.0, 0.0), vec2<f32>(0.99999994, 0.99999994));
+    let cell = vec2<u32>(
+        u32(clamped.x * f32(uniforms.interaction.grid_width)),
+        u32(clamped.y * f32(uniforms.interaction.grid_height)),
+    );
+    return cell.y * uniforms.interaction.grid_width + cell.x;
+}
+
 fn interaction_radius(a: Particle, b: Particle) -> f32 {
     return uniforms.interaction.radius + a.size + b.size;
 }
@@ -107,41 +122,65 @@ fn apply_particle_neighbor_interaction(index: u32, particle: ptr<function, Parti
         return;
     }
 
-    // Neighbor impulses apply in particle-index order so the sequential
-    // velocity updates produce the same result on every dispatch.
-    for (var neighbor_index = 0u; neighbor_index < uniforms.max_particles; neighbor_index += 1u) {
-        if (neighbor_index == index) {
+    // Neighbor impulses apply in the grid's sorted cell order so the
+    // sequential velocity updates produce the same result on every dispatch.
+    let cell = vec2<i32>(
+        i32(grid_cell_index((*particle).pos) % uniforms.interaction.grid_width),
+        i32(grid_cell_index((*particle).pos) / uniforms.interaction.grid_width),
+    );
+
+    for (var oy = -1; oy <= 1; oy += 1) {
+        let neighbor_y = cell.y + oy;
+        if (neighbor_y < 0 || neighbor_y >= i32(uniforms.interaction.grid_height)) {
             continue;
         }
 
-        let neighbor = particle_source[neighbor_index];
-        if (neighbor.life <= 0.0 || neighbor.max_life <= 0.0) {
-            continue;
-        }
+        for (var ox = -1; ox <= 1; ox += 1) {
+            let neighbor_x = cell.x + ox;
+            if (neighbor_x < 0 || neighbor_x >= i32(uniforms.interaction.grid_width)) {
+                continue;
+            }
 
-        let delta = (*particle).pos - neighbor.pos;
-        let radius = interaction_radius((*particle), neighbor);
-        let distance_sq = dot(delta, delta);
-        if (distance_sq >= radius * radius) {
-            continue;
-        }
+            let neighbor_cell_index = u32(neighbor_y) * uniforms.interaction.grid_width + u32(neighbor_x);
+            let range_start = cell_offsets[neighbor_cell_index];
+            let range_end = range_start + atomicLoad(&cell_counts[neighbor_cell_index]);
 
-        let distance = sqrt(distance_sq);
-        var normal = vec2<f32>(0.0, -1.0);
-        if (distance > 0.000001) {
-            normal = delta / distance;
-        } else {
-            let hashed = pcg_hash(index ^ neighbor_index);
-            let angle = f32(hashed & 1023u) / 1023.0 * TAU;
-            normal = vec2<f32>(cos(angle), sin(angle));
-        }
+            for (var slot = range_start; slot < range_end; slot += 1u) {
+                let neighbor_index = particle_links[slot];
+                if (neighbor_index == index) {
+                    continue;
+                }
 
-        let overlap = radius - distance;
-        let relative_speed = dot((*particle).vel - neighbor.vel, normal);
-        let impulse = overlap * uniforms.interaction.strength;
-        (*particle).vel += normal * impulse * uniforms.dt;
-        if (relative_speed < 0.0) {
-            (*particle).vel -= normal * relative_speed * 0.5;
+                let neighbor = particle_source[neighbor_index];
+                if (neighbor.life <= 0.0 || neighbor.max_life <= 0.0) {
+                    continue;
+                }
+
+                let delta = (*particle).pos - neighbor.pos;
+                let radius = interaction_radius((*particle), neighbor);
+                let distance_sq = dot(delta, delta);
+                if (distance_sq >= radius * radius) {
+                    continue;
+                }
+
+                let distance = sqrt(distance_sq);
+                var normal = vec2<f32>(0.0, -1.0);
+                if (distance > 0.000001) {
+                    normal = delta / distance;
+                } else {
+                    let hashed = pcg_hash(index ^ neighbor_index);
+                    let angle = f32(hashed & 1023u) / 1023.0 * TAU;
+                    normal = vec2<f32>(cos(angle), sin(angle));
+                }
+
+                let overlap = radius - distance;
+                let relative_speed = dot((*particle).vel - neighbor.vel, normal);
+                let impulse = overlap * uniforms.interaction.strength;
+                (*particle).vel += normal * impulse * uniforms.dt;
+                if (relative_speed < 0.0) {
+                    (*particle).vel -= normal * relative_speed * 0.5;
+                }
+            }
         }
     }
 }
@@ -210,6 +249,84 @@ fn apply_circle_obstacle_collision(
 fn apply_circle_obstacle_collisions(particle: ptr<function, Particle>) {
     for (var i = 0u; i < uniforms.collision.circle_obstacle_count; i += 1u) {
         apply_circle_obstacle_collision(particle, circle_obstacles[i]);
+    }
+}
+
+// Deterministic counting-sort grid build: counts, then a serial prefix sum,
+// then an atomic scatter whose per-cell order is fixed by the sort pass, so
+// the interaction traversal never depends on dispatch scheduling.
+@compute @workgroup_size(64)
+fn clear_grid(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index = global_id.x;
+    let cell_count = uniforms.interaction.grid_width * uniforms.interaction.grid_height;
+    if (index >= cell_count) {
+        return;
+    }
+    atomicStore(&cell_counts[index], 0u);
+}
+
+@compute @workgroup_size(64)
+fn count_grid(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index = global_id.x;
+    if (index >= uniforms.max_particles) {
+        return;
+    }
+
+    let particle = particle_source[index];
+    if (particle.life <= 0.0 || particle.max_life <= 0.0) {
+        return;
+    }
+
+    atomicAdd(&cell_counts[grid_cell_index(particle.pos)], 1u);
+}
+
+@compute @workgroup_size(1)
+fn prefix_grid() {
+    let cell_count = uniforms.interaction.grid_width * uniforms.interaction.grid_height;
+    var running = 0u;
+    for (var cell = 0u; cell < cell_count; cell += 1u) {
+        cell_offsets[cell] = running;
+        atomicStore(&cell_cursors[cell], running);
+        running += atomicLoad(&cell_counts[cell]);
+    }
+}
+
+@compute @workgroup_size(64)
+fn scatter_grid(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index = global_id.x;
+    if (index >= uniforms.max_particles) {
+        return;
+    }
+
+    let particle = particle_source[index];
+    if (particle.life <= 0.0 || particle.max_life <= 0.0) {
+        return;
+    }
+
+    let slot = atomicAdd(&cell_cursors[grid_cell_index(particle.pos)], 1u);
+    particle_links[slot] = index;
+}
+
+@compute @workgroup_size(64)
+fn sort_grid(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let cell = global_id.x;
+    let cell_count = uniforms.interaction.grid_width * uniforms.interaction.grid_height;
+    if (cell >= cell_count) {
+        return;
+    }
+
+    // One thread per cell: insertion-sort its range by particle index, so the
+    // neighbor traversal order is stable across dispatches.
+    let start = cell_offsets[cell];
+    let count = atomicLoad(&cell_counts[cell]);
+    for (var i = 1u; i < count; i += 1u) {
+        let key = particle_links[start + i];
+        var j = i;
+        while (j > 0u && particle_links[start + j - 1u] > key) {
+            particle_links[start + j] = particle_links[start + j - 1u];
+            j -= 1u;
+        }
+        particle_links[start + j] = key;
     }
 }
 

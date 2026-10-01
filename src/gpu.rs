@@ -126,6 +126,10 @@ pub struct GpuParticle {
 pub struct InteractionUniforms {
     /// Whether particle-particle interaction is active.
     pub enabled: u32,
+    /// Width of the spatial hashing grid.
+    pub grid_width: u32,
+    /// Height of the spatial hashing grid.
+    pub grid_height: u32,
     /// Additional interaction radius beyond particle size.
     pub radius: f32,
     /// Velocity response strength.
@@ -134,9 +138,17 @@ pub struct InteractionUniforms {
 
 impl InteractionUniforms {
     #[must_use]
-    pub fn new(enabled: bool, radius: f32, strength: f32) -> Self {
+    pub fn new(
+        enabled: bool,
+        grid_width: u32,
+        grid_height: u32,
+        radius: f32,
+        strength: f32,
+    ) -> Self {
         Self {
             enabled: u32::from(enabled),
+            grid_width,
+            grid_height,
             radius,
             strength,
         }

@@ -49,6 +49,7 @@ shaderloom = "0.1.2"
 bytemuck = { version = "1.23.1", features = ["derive"] }
 encase = "0.13"
 fastrand = "2.3"
+num-traits = "0.2.19"
 pollster = "0.4.0"
 
 [build-dependencies]
