@@ -163,7 +163,7 @@ waterui-barcode = { git = "https://github.com/water-rs/barcode", rev = "4c530503
 waterui-canvas = { git = "https://github.com/water-rs/canvas", rev = "ac4737d276bcf4e7c498938c0842ab1f5848cf9a" }
 waterui-chart = { git = "https://github.com/water-rs/chart", rev = "ff481c3d319b7d025a1fa0c1dcdb283f92be9689" }
 waterui-map-gpu = { git = "https://github.com/water-rs/map-gpu", rev = "13e199d255a11637e03341e0a947447851eff85e" }
-waterui-video-gpu = { git = "https://github.com/water-rs/video-gpu", rev = "334460886d5e6da7841c58c82835448c26bdcf75" }
+waterui-video-gpu = { git = "https://github.com/water-rs/video-gpu", rev = "0c5f88cf24f59423e2fdfc8b2a795b7438468f80" }
 waterui-particle = { git = "https://github.com/water-rs/particle", rev = "e27ae84666ee58c2ff4adae16d9227baf7efc3f2" }
 waterui-image = { git = "https://github.com/water-rs/image", rev = "27ab17cad98e8b08f50d9df5a66d9ec11529a69f" }
 waterui-svg = { git = "https://github.com/water-rs/svg", rev = "d53a94b03236718c9ee506bd9f5b4b1d2f247a8b" }
@@ -171,8 +171,8 @@ waterui-math = { git = "https://github.com/water-rs/math", rev = "f59cc09fd27f20
 waterui-dew = { git = "https://github.com/water-rs/dew", rev = "1b683d0daab9a119396fb3b31d31bc2445f39bc9" }
 waterui-gtk = { git = "https://github.com/water-rs/gtk-backend", rev = "fd2284f2a997ee8f31923fe8774e95450167bb0d" }
 waterui-winui = { git = "https://github.com/water-rs/waterui-winui", rev = "830932ce5f0a3d316d225da207c88ae9e66ff946" }
-hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "783208625bf5e1abdcb8c7a5dc241e599cccd4c8" }
-hydrolysis-m3 = { git = "https://github.com/water-rs/hydrolysis-m3", rev = "af90237154cd26080e89bf0ef0ab9828f0bb9a67" }
+hydrolysis = { git = "https://github.com/water-rs/hydrolysis", rev = "a833de993561aa1a10682baed4b13fd83d0c687e" }
+hydrolysis-m3 = { git = "https://github.com/water-rs/hydrolysis-m3", rev = "a3ff145ac5458c8d62c273e401fee68dce3c4521" }
 shaderloom = { git = "https://github.com/water-rs/shaderloom", rev = "84c37c8314f1bb6d228fce30f78d94872247a18f" }
 wgpu-external-frame = { git = "https://github.com/water-rs/wgpu-external-frame", rev = "d047b57e6fd8930f95c78b3e4fba7b06cd056b68" }
 
