@@ -37,7 +37,7 @@ multiple_crate_versions = "allow"
 # moves to the released version in the commit that drops the pins below.
 waterui-core = { version = "0.5.1" }
 waterui-graphics = { version = "0.5.1", features = ["gpu"] }
-shaderloom = "0.1.2"
+shaderloom = { version = "0.1.2", default-features = false, features = ["runtime"] }
 wgpu = "30.0.1"
 bytemuck = { version = "1.25", features = ["derive"] }
 encase = "0.12"
@@ -46,7 +46,7 @@ fastrand = "2.5"
 num-traits = { version = "0.2", default-features = false }
 
 [build-dependencies]
-shaderloom = { version = "0.1.2", features = ["build"] }
+shaderloom = { version = "0.1.2", default-features = false, features = ["build"] }
 
 [dev-dependencies]
 pollster = "1.0"
