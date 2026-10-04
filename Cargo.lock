@@ -135,7 +135,7 @@ version = "0.38.0+1.3.281"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bb44936d800fea8f016d7f2311c6a4f97aebd5dc86f09906139ec848cf3a46f"
 dependencies = [
- "libloading",
+ "libloading 0.8.9",
 ]
 
 [[package]]
@@ -488,13 +488,16 @@ checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 [[package]]
 name = "cherenkov"
 version = "0.0.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
- "color",
+ "arc-swap",
+ "cherenkov-record",
+ "crossbeam-channel",
  "filtrate-core",
  "kurbo",
  "libm",
  "nami-core",
+ "parley",
  "rustc-hash 2.1.3",
  "serde",
  "thiserror 2.0.21",
@@ -506,7 +509,7 @@ dependencies = [
 [[package]]
 name = "cherenkov-gpu"
 version = "0.0.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "ash",
  "block2",
@@ -522,7 +525,6 @@ dependencies = [
  "js-sys",
  "kurbo",
  "libc",
- "libm",
  "naga",
  "ndk",
  "ndk-sys",
@@ -530,6 +532,7 @@ dependencies = [
  "objc2-app-kit",
  "objc2-av-foundation",
  "objc2-core-foundation",
+ "objc2-core-graphics",
  "objc2-core-media",
  "objc2-core-video",
  "objc2-foundation",
@@ -548,9 +551,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cherenkov-record"
+version = "0.0.0"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
+dependencies = [
+ "color",
+ "kurbo",
+ "nami-core",
+ "serde",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
 name = "cherenkov-shader"
 version = "0.0.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "naga",
  "thiserror 2.0.21",
@@ -678,6 +694,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98b0cc327b5bc766e7fda9c9260cc0fa81b43a8e240440422dff70788e3f9ef1"
+dependencies = [
+ "crossbeam-utils",
 ]
 
 [[package]]
@@ -830,7 +855,7 @@ version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab8ecd87370524b461f8557c119c405552c396ed91fc0a8eec68679eab26f94a"
 dependencies = [
- "libloading",
+ "libloading 0.8.9",
 ]
 
 [[package]]
@@ -1051,7 +1076,7 @@ dependencies = [
 [[package]]
 name = "filtrate"
 version = "0.2.1"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "bytemuck",
  "cherenkov-shader",
@@ -1069,12 +1094,12 @@ dependencies = [
 [[package]]
 name = "filtrate-core"
 version = "0.2.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[package]]
 name = "filtrate-derive"
 version = "0.1.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1469,7 +1494,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 [[package]]
 name = "hydrolysis"
 version = "0.3.1"
-source = "git+https://github.com/water-rs/hydrolysis?rev=ecf84009952be5ed630f05115e12096d78416490#ecf84009952be5ed630f05115e12096d78416490"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "accesskit",
  "android_logger",
@@ -1484,11 +1509,13 @@ dependencies = [
  "keyboard-types",
  "kurbo",
  "libc",
- "log",
+ "libloading 0.9.0",
  "lru",
  "nami",
  "native-executor",
  "ndk",
+ "ndk-context",
+ "ndk-sys",
  "parley",
  "peniko",
  "png",
@@ -2105,7 +2132,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6aae1df220ece3c0ada96b8153459b67eebe9ae9212258bb0134ae60416fdf76"
 dependencies = [
  "libc",
- "libloading",
+ "libloading 0.8.9",
  "pkg-config",
 ]
 
@@ -2146,6 +2173,16 @@ name = "libloading"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link 0.2.1",
+]
+
+[[package]]
+name = "libloading"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
 dependencies = [
  "cfg-if",
  "windows-link 0.2.1",
@@ -4366,7 +4403,7 @@ dependencies = [
 [[package]]
 name = "waterui"
 version = "0.5.2"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "waterui-dylib",
  "waterui-internal",
@@ -4375,7 +4412,7 @@ dependencies = [
 [[package]]
 name = "waterui-assets"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "blocking",
  "memmap2",
@@ -4387,7 +4424,7 @@ dependencies = [
 [[package]]
 name = "waterui-assets-core"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "blocking",
  "tempfile",
@@ -4397,7 +4434,7 @@ dependencies = [
 [[package]]
 name = "waterui-assets-macros"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -4410,7 +4447,7 @@ dependencies = [
 [[package]]
 name = "waterui-assets-planner"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "heck",
  "serde",
@@ -4419,12 +4456,13 @@ dependencies = [
  "toml",
  "walkdir",
  "waterui-assets-core",
+ "waterui-meta",
 ]
 
 [[package]]
 name = "waterui-backend-core"
 version = "0.5.2"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "kurbo",
  "nami",
@@ -4443,7 +4481,7 @@ dependencies = [
 [[package]]
 name = "waterui-controls"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "executor-core",
  "nami",
@@ -4458,7 +4496,7 @@ dependencies = [
 [[package]]
 name = "waterui-core"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "anyhow",
  "bitflags 2.13.2",
@@ -4473,7 +4511,7 @@ dependencies = [
 [[package]]
 name = "waterui-dylib"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "waterui-internal",
 ]
@@ -4481,7 +4519,7 @@ dependencies = [
 [[package]]
 name = "waterui-form"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "getrandom",
  "jiff",
@@ -4503,13 +4541,14 @@ dependencies = [
 [[package]]
 name = "waterui-graphics"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "arc-swap",
  "bytemuck",
  "cherenkov",
  "cherenkov-gpu",
  "color",
+ "event-listener",
  "filtrate",
  "image",
  "keyboard-types",
@@ -4527,7 +4566,7 @@ dependencies = [
 [[package]]
 name = "waterui-icon"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "suiteki",
  "waterui-core",
@@ -4538,7 +4577,7 @@ dependencies = [
 [[package]]
 name = "waterui-inspector-protocol"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "bincode 2.0.1",
  "bitflags 2.13.2",
@@ -4553,7 +4592,7 @@ dependencies = [
 [[package]]
 name = "waterui-internal"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "async-channel",
  "cpu-time",
@@ -4589,7 +4628,7 @@ dependencies = [
 [[package]]
 name = "waterui-layout"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "nami",
  "num-traits",
@@ -4601,7 +4640,7 @@ dependencies = [
 [[package]]
 name = "waterui-locale"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "fixed_decimal",
  "iana-time-zone",
@@ -4629,7 +4668,7 @@ dependencies = [
 [[package]]
 name = "waterui-macros"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "icu_locale_core",
  "proc-macro-crate",
@@ -4642,7 +4681,7 @@ dependencies = [
 [[package]]
 name = "waterui-map"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "nami",
  "suiteki",
@@ -4651,9 +4690,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "waterui-meta"
+version = "0.5.1"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
+
+[[package]]
 name = "waterui-navigation"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "nami",
  "waterui-controls",
@@ -4685,7 +4729,7 @@ dependencies = [
 [[package]]
 name = "waterui-preview-protocol"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "bincode 2.0.1",
  "dirs 7.0.0",
@@ -4699,7 +4743,7 @@ dependencies = [
 [[package]]
 name = "waterui-shape"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "executor-core",
  "nami",
@@ -4713,7 +4757,7 @@ dependencies = [
 [[package]]
 name = "waterui-svg"
 version = "0.4.0"
-source = "git+https://github.com/water-rs/svg?rev=bdc07b2488cef4823ed7995dd56384b2383d7348#bdc07b2488cef4823ed7995dd56384b2383d7348"
+source = "git+https://github.com/water-rs/svg?rev=50a87217658e9cf40024bf50619c4d7555a6415b#50a87217658e9cf40024bf50619c4d7555a6415b"
 dependencies = [
  "cherenkov",
  "suiteki",
@@ -4728,7 +4772,7 @@ dependencies = [
 [[package]]
 name = "waterui-testing"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "accesskit",
  "executor-core",
@@ -4747,7 +4791,7 @@ dependencies = [
 [[package]]
 name = "waterui-text"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "nami",
  "parley",
@@ -4767,7 +4811,7 @@ dependencies = [
 [[package]]
 name = "waterui-url"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "base64",
  "nami-core",
@@ -4777,12 +4821,12 @@ dependencies = [
 [[package]]
 name = "waterui-watcher-set"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[package]]
 name = "waterui-webview"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 dependencies = [
  "base64",
  "cookie",
@@ -5005,7 +5049,7 @@ dependencies = [
  "js-sys",
  "khronos-egl",
  "libc",
- "libloading",
+ "libloading 0.8.9",
  "log",
  "naga",
  "naga-types",
@@ -5868,7 +5912,7 @@ source = "git+https://github.com/Dicklesworthstone/rust-block?rev=b39ae859d1ee8e
 [[patch.unused]]
 name = "cherenkov-cpu"
 version = "0.0.0"
-source = "git+https://github.com/water-rs/cherenkov?rev=2cae05177f4ae0252ae225ab9796a016037e8076#2cae05177f4ae0252ae225ab9796a016037e8076"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "hydrolysis-m3"
@@ -6043,12 +6087,12 @@ source = "git+https://github.com/water-rs/barcode?rev=8fce880bc3d053e5c49dcf9e69
 [[patch.unused]]
 name = "waterui-browser-cef"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-browser-wpe"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-canvas"
@@ -6063,7 +6107,7 @@ source = "git+https://github.com/water-rs/chart?rev=fa38cabe5a49a3bcb1d809018115
 [[patch.unused]]
 name = "waterui-chromium"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-dew"
@@ -6073,12 +6117,12 @@ source = "git+https://github.com/water-rs/dew?rev=1b683d0daab9a119396fb3b31d31bc
 [[patch.unused]]
 name = "waterui-ffi"
 version = "0.5.2"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-ffi-generator"
 version = "0.1.0"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-gtk"
@@ -6088,32 +6132,32 @@ source = "git+https://github.com/water-rs/gtk-backend?rev=fd2284f2a997ee8f31923f
 [[patch.unused]]
 name = "waterui-icons-codegen"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-icons-fontawesome7"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-icons-lucide"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-icons-material-icon"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-icons-native"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-icons-sf-symbol"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-image"
@@ -6123,7 +6167,7 @@ source = "git+https://github.com/water-rs/image?rev=149fcea688d90ffa8edd1b66e647
 [[patch.unused]]
 name = "waterui-inspector-app"
 version = "0.5.2"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-map-gpu"
@@ -6138,17 +6182,17 @@ source = "git+https://github.com/water-rs/math?rev=d263e493d39e93ca822e621b0b951
 [[patch.unused]]
 name = "waterui-mcp"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-mcp-protocol"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-media"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-particle"
@@ -6158,12 +6202,12 @@ source = "git+https://github.com/water-rs/particle?rev=039e0b9e7a15ea4a2b7651bbd
 [[patch.unused]]
 name = "waterui-preview"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-video"
 version = "0.5.1"
-source = "git+https://github.com/water-rs/waterui?rev=ada952c7c0a65408db9b2cf67442bff7ae16aeb7#ada952c7c0a65408db9b2cf67442bff7ae16aeb7"
+source = "git+https://github.com/water-rs/waterui?rev=2865ed442db8e107ea3991e6ac2b46b20a1ffff8#2865ed442db8e107ea3991e6ac2b46b20a1ffff8"
 
 [[patch.unused]]
 name = "waterui-video-gpu"
