@@ -334,8 +334,8 @@ impl ParticleSystem {
         let (feed, renderer) = self.renderer(env);
         let engine = runtime.engine()?;
         let pixels = (size.width(), size.height());
-        let surface = engine.surface(Offscreen::new(pixels, OffscreenFormat::LinearF16))?;
-        let content = GpuContentView::new(renderer).take_engine_content(|| {});
+        let surface = engine.surface(Offscreen::new(pixels, OffscreenFormat::LinearF16), || {})?;
+        let content = GpuContentView::new(renderer).take_engine_content();
         let producer = engine.gpu_producer(content);
         surface.update(|tx| {
             tx[surface.root()].content(producer.at(pixels));
