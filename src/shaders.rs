@@ -1,6 +1,7 @@
 //! Build-time compiled shaders for the particle system.
 
 use shaderloom::CompiledShader;
+use waterui_graphics::wgpu;
 
 pub const COMPUTE_SHADER: CompiledShader =
     include!(concat!(env!("OUT_DIR"), "/particle_compute.rs"));

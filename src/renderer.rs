@@ -16,6 +16,7 @@ use waterui_core::{Computed, Environment, Signal, SignalExt, flatten_signal};
 use waterui_graphics::{
     color::WorkingColor,
     gpu::{Context, Frame, GpuContent},
+    wgpu,
 };
 
 /// Resolved particle configuration ready for GPU.
@@ -796,6 +797,7 @@ mod tests {
     use waterui_graphics::{
         color::WorkingColor,
         gpu::{Context, Frame, GpuContent, GpuRuntime, RedrawHandle, SharedGpuContext},
+        wgpu,
     };
 
     fn test_gpu_runtime() -> GpuRuntime {
