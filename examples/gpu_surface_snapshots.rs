@@ -144,11 +144,7 @@ fn composite_over_opaque_background(
         })
         .collect();
 
-    OffscreenImage {
-        width: output.width,
-        height: output.height,
-        rgba8,
-    }
+    OffscreenImage::new(output.width(), output.height(), rgba8)
 }
 
 fn write_snapshot(runtime: &GpuRuntime, output_dir: &Path, spec: SnapshotSpec) {

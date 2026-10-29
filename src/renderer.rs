@@ -490,7 +490,7 @@ impl GpuContent for ParticleRenderer {
     )]
     fn setup(&mut self, ctx: &Context<'_>) {
         let config = &self.resolved_config;
-        let device = ctx.device;
+        let device = ctx.device();
         let particle_size = <GpuParticle as ShaderSize>::SHADER_SIZE.get();
         let buffer_size = particle_size * u64::from(config.max_particles);
         let collision_stride = <GpuCircleObstacle as ShaderSize>::SHADER_SIZE.get();
@@ -534,7 +534,7 @@ impl GpuContent for ParticleRenderer {
             mapped_at_creation: false,
         });
         write_obstacles(
-            ctx.queue,
+            ctx.queue(),
             &collision_buffer,
             &config.collision_circle_obstacles,
         );
@@ -659,7 +659,7 @@ impl GpuContent for ParticleRenderer {
                 module: fragment_shader.module(),
                 entry_point: Some(fragment_shader.entry_point()),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: ctx.format,
+                    format: ctx.format(),
                     blend: Some(blend_state(config.blend_mode)),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -805,13 +805,13 @@ mod tests {
     }
 
     fn test_gpu_context(shared: &SharedGpuContext) -> Context<'_> {
-        Context {
-            adapter: shared.adapter(),
-            device: shared.device(),
-            queue: shared.queue(),
-            format: wgpu::TextureFormat::Rgba16Float,
-            redraw: RedrawHandle::new(|| {}),
-        }
+        Context::new(
+            shared.adapter(),
+            shared.device(),
+            shared.queue(),
+            wgpu::TextureFormat::Rgba16Float,
+            RedrawHandle::new(|| {}),
+        )
     }
 
     fn opaque_white() -> WorkingColor {
@@ -861,7 +861,7 @@ mod tests {
         use std::sync::mpsc;
 
         let mut encoder = ctx
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
         let config = renderer.resolved_config.clone();
         let target_index = renderer.encode_simulation_passes(
@@ -872,7 +872,7 @@ mod tests {
 
         let buffer_size =
             <GpuParticle as ShaderSize>::SHADER_SIZE.get() * u64::from(particle_count);
-        let readback = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+        let readback = ctx.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some(label),
             size: buffer_size,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
@@ -885,13 +885,13 @@ mod tests {
             0,
             buffer_size,
         );
-        ctx.queue.submit([encoder.finish()]);
+        ctx.queue().submit([encoder.finish()]);
 
         let (tx, rx) = mpsc::channel();
         readback.map_async(wgpu::MapMode::Read, .., move |result| {
             let _ = tx.send(result);
         });
-        ctx.device
+        ctx.device()
             .poll(wgpu::PollType::wait_indefinitely())
             .expect("particle compute readback completes");
         rx.recv()
@@ -977,7 +977,7 @@ mod tests {
                 particle_data
                     .write(&vec![particle])
                     .expect("prefilled particle buffer encoding must succeed");
-                ctx.queue
+                ctx.queue()
                     .write_buffer(self.inner.particle_buffer(0), 0, particle_data.as_ref());
             }
 
@@ -1003,11 +1003,11 @@ mod tests {
         let size = OffscreenSize::try_from_pixels(256, 256).expect("test size must be valid");
         let output = runtime.render_content(renderer, size, 1.0);
 
-        assert_eq!(output.width, 256);
-        assert_eq!(output.height, 256);
-        assert_eq!(output.rgba8.len(), 256 * 256 * 4);
+        assert_eq!(output.width(), 256);
+        assert_eq!(output.height(), 256);
+        assert_eq!(output.rgba8().len(), 256 * 256 * 4);
         let center = (128 * 256 + 128) * 4;
-        let [red, green, blue, alpha] = output.rgba8[center..center + 4]
+        let [red, green, blue, alpha] = output.rgba8()[center..center + 4]
             .try_into()
             .expect("RGBA pixel");
         assert_eq!(alpha, 255);
@@ -1034,7 +1034,7 @@ mod tests {
         let config = renderer.resolved_config.clone();
         renderer.update_uniforms(
             &config,
-            ctx.queue,
+            ctx.queue(),
             256,
             256,
             std::time::Duration::from_secs_f32(1.0 / 60.0),
@@ -1107,7 +1107,7 @@ mod tests {
         particle_data
             .write(&vec![particle])
             .expect("prefilled collision particle encoding must succeed");
-        ctx.queue
+        ctx.queue()
             .write_buffer(renderer.particle_buffer(0), 0, particle_data.as_ref());
 
         let uniforms = Uniforms {
@@ -1123,7 +1123,7 @@ mod tests {
         uniform_data
             .write(&uniforms)
             .expect("collision test uniform encoding must succeed");
-        ctx.queue.write_buffer(
+        ctx.queue().write_buffer(
             renderer
                 .uniform_buffer
                 .as_ref()
@@ -1185,7 +1185,7 @@ mod tests {
         particle_data
             .write(&vec![particle])
             .expect("prefilled obstacle collision particle encoding must succeed");
-        ctx.queue
+        ctx.queue()
             .write_buffer(renderer.particle_buffer(0), 0, particle_data.as_ref());
 
         let uniforms = Uniforms {
@@ -1201,7 +1201,7 @@ mod tests {
         uniform_data
             .write(&uniforms)
             .expect("obstacle collision test uniform encoding must succeed");
-        ctx.queue.write_buffer(
+        ctx.queue().write_buffer(
             renderer
                 .uniform_buffer
                 .as_ref()
@@ -1269,7 +1269,7 @@ mod tests {
         particle_data
             .write(&vec![first, second])
             .expect("neighbor interaction particle encoding must succeed");
-        ctx.queue
+        ctx.queue()
             .write_buffer(renderer.particle_buffer(0), 0, particle_data.as_ref());
 
         let uniforms = Uniforms {
@@ -1285,7 +1285,7 @@ mod tests {
         uniform_data
             .write(&uniforms)
             .expect("neighbor interaction uniform encoding must succeed");
-        ctx.queue.write_buffer(
+        ctx.queue().write_buffer(
             renderer
                 .uniform_buffer
                 .as_ref()
