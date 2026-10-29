@@ -58,11 +58,11 @@ fn write_snapshot(runtime: &GpuRuntime, output_dir: &Path, spec: SnapshotSpec) {
         .save_png(output_dir.join(format!("{}.raw.png", spec.name)))
         .expect("raw particle png write should succeed");
 
-    let composited = OffscreenImage {
-        width: output.width,
-        height: output.height,
-        rgba8: composite_over_opaque_background(&output.premultiplied_rgba8(), spec.background),
-    };
+    let composited = OffscreenImage::new(
+        output.width(),
+        output.height(),
+        composite_over_opaque_background(&output.premultiplied_rgba8(), spec.background),
+    );
     composited
         .save_png(output_dir.join(format!("{}.png", spec.name)))
         .expect("composited particle png write should succeed");
