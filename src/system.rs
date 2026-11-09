@@ -341,10 +341,10 @@ impl ParticleSystem {
             tx[surface.root()].content(producer.at(pixels));
         });
         let start = Instant::now();
-        engine.render(FrameTime::at(start))?;
+        engine.render(FrameTime::unpresented_at(start))?;
         for frame in 1..=frame_count.get() {
             feed.pump();
-            engine.render(FrameTime::at(start + frame_interval * frame))?;
+            engine.render(FrameTime::unpresented_at(start + frame_interval * frame))?;
         }
         Ok(surface.readback()?)
     }
