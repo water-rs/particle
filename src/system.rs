@@ -9,9 +9,8 @@ use core::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use waterui_core::{Computed, Environment, IntoSignal, IntoSignalF32, SignalExt, View};
 use waterui_graphics::{
-    cherenkov::{FrameTime, Offscreen, OffscreenFormat, Readback},
     color::Color,
-    gpu::{GpuContentView, GpuRuntime},
+    gpu::{FrameTime, GpuContentView, GpuRuntime, Offscreen, OffscreenFormat, Readback},
     offscreen::{OffscreenError, OffscreenSize},
 };
 
