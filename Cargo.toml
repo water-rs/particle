@@ -129,7 +129,7 @@ waterui-svg = { git = "https://github.com/water-rs/svg", rev = "16f99e021f735d0b
 # on trunk, not yet released for v30). The branch also carries the passthrough
 # threadgroup-memory metadata and moves wgpu-hal to glow 0.18, as trunk has;
 # drop these entries once a wgpu-hal release ships them.
-shaderloom = { git = "https://github.com/water-rs/shaderloom", branch = "dev" }
+shaderloom = { git = "https://github.com/water-rs/shaderloom", branch = "main" }
 naga = { git = "https://github.com/water-rs/wgpu", branch = "fix/metal-shared-memory-v30" }
 naga-types = { git = "https://github.com/water-rs/wgpu", branch = "fix/metal-shared-memory-v30" }
 wgpu = { git = "https://github.com/water-rs/wgpu", branch = "fix/metal-shared-memory-v30" }
@@ -143,7 +143,7 @@ wgpu-types = { git = "https://github.com/water-rs/wgpu", branch = "fix/metal-sha
 # wgpu-external-frame hands wgpu-hal's GLES textures to its own glow context, so
 # it must link the glow 0.18 the branch above carries; its crates.io 0.4.0 links
 # 0.17 (water-rs/wgpu-external-frame#43). Drop it with the wgpu entries.
-wgpu-external-frame = { git = "https://github.com/water-rs/wgpu-external-frame", branch = "dev" }
+wgpu-external-frame = { git = "https://github.com/water-rs/wgpu-external-frame", branch = "main" }
 
 # suiteki 0.1.1 on crates.io implements nami-core 0.3's `Signal`; suiteki dev
 # at the merge of water-rs/suiteki#27 implements 0.4's. Drop once a release
