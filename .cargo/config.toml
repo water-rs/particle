@@ -1,0 +1,6 @@
+# Cherenkov's Apple build script asks rustc for the deployment target and
+# refuses anything older than macOS/iOS 26. A dependency's `.cargo/config.toml`
+# does not apply to this graph, so the floor is set here.
+[env]
+MACOSX_DEPLOYMENT_TARGET = "26.0"
+IPHONEOS_DEPLOYMENT_TARGET = "26.0"
