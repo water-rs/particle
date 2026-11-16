@@ -1000,7 +1000,9 @@ mod tests {
 
         let runtime = test_gpu_runtime();
         let size = OffscreenSize::try_from_pixels(256, 256).expect("test size must be valid");
-        let output = runtime.render_content(renderer, size, 1.0);
+        let output = runtime
+            .render_content(renderer, size, 1.0)
+            .expect("the particle content must render");
 
         assert_eq!(output.width(), 256);
         assert_eq!(output.height(), 256);

@@ -119,7 +119,7 @@ waterkit-permission = { git = "https://github.com/water-rs/waterkit", rev = "23b
 
 # The `waterui-svg` component rides its `dev` head, where the
 # recording-contract port already landed.
-waterui-svg = { git = "https://github.com/water-rs/svg", rev = "16f99e021f735d0b1b31c95552b074e953d56418" }
+waterui-svg = { git = "https://github.com/water-rs/svg", branch = "main" }
 
 # Mirrored from water-rs/waterui's workspace [patch.crates-io] on `dev`
 # (`[patch]` in a dependency's manifest does not apply downstream).
