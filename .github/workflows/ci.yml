@@ -124,12 +124,21 @@ jobs:
       - run: cargo check -p waterui-particle --all-features
       - run: cargo check --workspace
 
+  gallery:
+    name: Visual Gallery
+    needs: bump
+    uses: water-rs/.github/.github/workflows/visual-gallery.yml@main
+    with:
+      packages: "-p waterui-particle"
+      nextest-args: "--test visual"
+      artifact-name: "particle-visual-gallery"
+
   result:
     # The single check the `main` ruleset requires: it passes when every
     # job passed or was skipped (release-plz bump pull requests skip all).
     name: CI result
     if: always()
-    needs: [bump, test, lint, msrv]
+    needs: [bump, test, lint, msrv, gallery]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
