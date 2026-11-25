@@ -28,7 +28,7 @@ pub fn rain_system() -> ParticleSystem {
         .speed(2.5, 4.5) // Much faster
         .angle(PI * 0.49, PI * 0.51) // More vertical
         // Very thin streaks
-        .size(0.0008, 0.0015)
+        .particle_size(0.0008, 0.0015)
         .color(
             Color::from(Srgb::new(0.8, 0.9, 1.0)).with_opacity(0.4),
             Color::from(Srgb::new(0.85, 0.95, 1.0)).with_opacity(0.0),
@@ -55,7 +55,7 @@ fn snow() -> impl View {
         // Slight downward angle variation
         .angle(PI * 0.4, PI * 0.6)
         // High size variation for depth
-        .size(0.0015, 0.006)
+        .particle_size(0.0015, 0.006)
         .color(
             Color::from(Srgb::WHITE).with_opacity(0.8),
             Color::from(Srgb::WHITE).with_opacity(0.0),
@@ -77,7 +77,7 @@ fn fog() -> impl View {
         .speed(0.02, 0.08)
         .angle(PI * 1.4, PI * 1.6) // Upwards
         // Large generic blobs
-        .size(0.1, 0.25)
+        .particle_size(0.1, 0.25)
         .color(
             Color::from(Srgb::new(0.8, 0.85, 0.8)).with_opacity(0.1),
             Color::from(Srgb::new(0.8, 0.85, 0.8)).with_opacity(0.0),
@@ -95,7 +95,7 @@ pub fn flame_system() -> ParticleSystem {
         .life(0.4, 0.8)
         .speed(0.5, 1.2)
         .angle(PI * 1.4, PI * 1.6) // Up
-        .size(0.03, 0.06)
+        .particle_size(0.03, 0.06)
         .color(
             Color::from(Srgb::new(1.0, 0.7, 0.1)).with_opacity(0.6), // Orange
             Color::from(Srgb::new(1.0, 0.1, 0.05)).with_opacity(0.0), // Red fade
@@ -118,7 +118,7 @@ fn firework() -> impl View {
         .life(1.0, 1.5)
         .speed(1.8, 2.8) // Fast launch
         .angle(PI * 1.35, PI * 1.65) // Cone up
-        .size(0.006, 0.012)
+        .particle_size(0.006, 0.012)
         .color(
             Color::from(Srgb::new(1.0, 0.9, 0.6)).with_opacity(0.9), // Gold bright
             Color::from(Srgb::new(1.0, 0.4, 0.1)).with_opacity(0.0), // Orange fade
@@ -146,7 +146,7 @@ fn confetti_view() -> impl View {
             .life(5.0, 8.0)
             .speed(0.08, 0.25)
             .angle(PI * 0.4, PI * 0.6)
-            .size(size_start, size_end)
+            .particle_size(size_start, size_end)
             .gravity(0.0, 0.06)
             .turbulence(0.3)
             .color(
@@ -164,7 +164,7 @@ fn confetti_view() -> impl View {
             .life(5.0, 8.0)
             .speed(0.08, 0.25)
             .angle(PI * 0.4, PI * 0.6)
-            .size(size_start, size_end)
+            .particle_size(size_start, size_end)
             .gravity(0.0, 0.06)
             .turbulence(0.35)
             .color(
@@ -182,7 +182,7 @@ fn confetti_view() -> impl View {
             .life(5.0, 8.0)
             .speed(0.08, 0.25)
             .angle(PI * 0.4, PI * 0.6)
-            .size(size_start, size_end)
+            .particle_size(size_start, size_end)
             .gravity(0.0, 0.06)
             .turbulence(0.4)
             .color(
@@ -200,7 +200,7 @@ fn confetti_view() -> impl View {
             .life(5.0, 8.0)
             .speed(0.08, 0.25)
             .angle(PI * 0.4, PI * 0.6)
-            .size(size_start, size_end)
+            .particle_size(size_start, size_end)
             .gravity(0.0, 0.06)
             .turbulence(0.45)
             .color(
@@ -218,7 +218,7 @@ fn confetti_view() -> impl View {
             .life(5.0, 8.0)
             .speed(0.08, 0.25)
             .angle(PI * 0.4, PI * 0.6)
-            .size(size_start, size_end)
+            .particle_size(size_start, size_end)
             .gravity(0.0, 0.06)
             .turbulence(0.5)
             .color(
@@ -240,7 +240,7 @@ pub fn explosion_system() -> ParticleSystem {
         .life(0.8, 1.5)
         .speed(0.5, 3.0) // Varied speed (chunks flying out)
         .angle(0.0, PI * 2.0)
-        .size(0.003, 0.008) // Tiny blocks
+        .particle_size(0.003, 0.008) // Tiny blocks
         .color(
             Srgb::new(1.0, 0.5, 0.0).with_opacity(1.0), // Orange
             Srgb::new(0.2, 0.2, 0.2).with_opacity(1.0), // Fade to dark grey solid
@@ -262,7 +262,7 @@ fn bounce_box() -> impl View {
         .life(4.0, 6.0)
         .speed(0.5, 1.4)
         .angle(0.0, PI * 2.0)
-        .size(0.008, 0.018)
+        .particle_size(0.008, 0.018)
         .color(
             Srgb::new(0.4, 0.85, 1.0).with_opacity(0.9),
             Srgb::new(0.1, 0.45, 1.0).with_opacity(0.0),

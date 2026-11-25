@@ -14,7 +14,7 @@ fn particle_system_view() -> impl waterui::View {
         .life(0.6, 1.0)
         .speed(0.15, 0.25)
         .angle(1.3, 1.8)
-        .size(0.015, 0.03)
+        .particle_size(0.015, 0.03)
         .color(Srgb::WHITE, Srgb::new(1.0, 0.6, 0.1))
         .width(180.0)
         .height(120.0)
