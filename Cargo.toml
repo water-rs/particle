@@ -55,6 +55,7 @@ shaderloom = { version = "0.2.1", default-features = false, features = ["build"]
 [dev-dependencies]
 pollster = "1.0"
 waterui = "0.5.2"
+waterui-graphics = { version = "0.5.1", features = ["gpu", "image-decode"] }
 waterui-testing = "0.5.1"
 
 [package.metadata.cargo-machete]
