@@ -705,7 +705,7 @@ impl GpuContent for ParticleRenderer {
         let config = &self.resolved_config;
         if obstacles_changed {
             write_obstacles(
-                frame.queue,
+                frame.queue(),
                 self.collision_buffer
                     .as_ref()
                     .expect("collision buffer must exist before render"),
@@ -714,15 +714,15 @@ impl GpuContent for ParticleRenderer {
         }
         self.update_uniforms(
             config,
-            frame.queue,
-            frame.width,
-            frame.height,
-            frame.elapsed,
-            frame.delta,
+            frame.queue(),
+            frame.width(),
+            frame.height(),
+            frame.elapsed(),
+            frame.delta(),
         );
 
         let mut encoder = frame
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Particle Encoder"),
             });
@@ -741,7 +741,7 @@ impl GpuContent for ParticleRenderer {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Particle Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: frame.view,
+                    view: frame.view(),
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
@@ -760,7 +760,7 @@ impl GpuContent for ParticleRenderer {
             rpass.draw(0..6, 0..config.max_particles);
         }
 
-        frame.queue.submit(std::iter::once(encoder.finish()));
+        frame.queue().submit(std::iter::once(encoder.finish()));
         self.current_particle_buffer_index = render_buffer_index;
         frame.request_redraw();
     }

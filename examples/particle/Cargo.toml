@@ -11,5 +11,5 @@ dev = ["waterui/dynamic_linking"]
 [dependencies]
 pollster = "1.0"
 waterui = "0.5.2"
-waterui-graphics = { version = "0.5.1", features = ["gpu"] }
+waterui-graphics = { version = "0.5.1", features = ["gpu", "image-decode"] }
 waterui-particle = { path = "../.." }

@@ -6,7 +6,7 @@ resolver = "2"
 name = "waterui-particle"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 authors = ["Lexo Liu <me@lexo.cool>"]
 license = "Apache-2.0 OR MIT"
 readme = "README.md"
@@ -55,6 +55,7 @@ shaderloom = { version = "0.2.1", default-features = false, features = ["build"]
 [dev-dependencies]
 pollster = "1.0"
 waterui = "0.5.2"
+waterui-graphics = { version = "0.5.1", features = ["gpu", "image-decode"] }
 waterui-testing = "0.5.1"
 
 [package.metadata.cargo-machete]
@@ -109,13 +110,16 @@ waterui-watcher-set = { git = "https://github.com/water-rs/waterui", branch = "m
 waterui-webview = { git = "https://github.com/water-rs/waterui", branch = "main" }
 hydrolysis = { git = "https://github.com/water-rs/waterui", branch = "main" }
 
-waterkit-build = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-clipboard = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-core = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-dialog = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-fs = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-location = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
-waterkit-permission = { git = "https://github.com/water-rs/waterkit", rev = "23bca68e20b88a6b95b083c5b7d198cb51ed8313" }
+waterkit-build = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-clipboard = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-core = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-dialog = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-fs = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-location = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+waterkit-permission = { git = "https://github.com/water-rs/waterkit", branch = "main" }
+nami = { git = "https://github.com/water-rs/nami", branch = "main" }
+nami-core = { git = "https://github.com/water-rs/nami", branch = "main" }
+nami-derive = { git = "https://github.com/water-rs/nami", branch = "main" }
 
 # The `waterui-svg` component rides its `dev` head, where the
 # recording-contract port already landed.
@@ -148,4 +152,4 @@ wgpu-external-frame = { git = "https://github.com/water-rs/wgpu-external-frame",
 # suiteki 0.1.1 on crates.io implements nami-core 0.3's `Signal`; suiteki dev
 # at the merge of water-rs/suiteki#27 implements 0.4's. Drop once a release
 # carries it.
-suiteki = { git = "https://github.com/water-rs/suiteki", rev = "7cf17bdba0e978d388a096b1916daebdc17253b4" }
+suiteki = { git = "https://github.com/water-rs/suiteki", branch = "main" }
