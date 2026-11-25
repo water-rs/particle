@@ -14,9 +14,9 @@ use waterui_particle::{ParticleShape, ParticleSystem};
 
 fn title_label(color: impl Into<Color>) -> impl View {
     text("GPU Particle System")
-        .size(24.0)
-        .bold()
-        .foreground(color)
+        .font_size(24.0)
+        .bold(true)
+        .foreground(color.into())
 }
 
 pub fn rain_system() -> ParticleSystem {
@@ -363,6 +363,6 @@ pub fn demo() -> impl View {
     ))
 }
 
-pub fn app(env: Environment) -> App {
-    App::new(demo, env)
+pub fn app(env: Environment) -> App<impl Windows> {
+    App::new(env).window(Window::new("", demo))
 }
