@@ -30,7 +30,7 @@ fn rain_scene() -> ParticleSystem {
         .life(0.6, 0.8)
         .speed(2.4, 4.2)
         .angle(PI * 0.49, PI * 0.51)
-        .size(0.0008, 0.0015)
+        .particle_size(0.0008, 0.0015)
         .color(
             Color::srgb_hex("#D5E8FF").with_opacity(0.45),
             Color::srgb_hex("#E8F5FF").with_opacity(0.0),
@@ -49,7 +49,7 @@ fn flame_scene() -> ParticleSystem {
         .life(0.4, 0.8)
         .speed(0.5, 1.2)
         .angle(PI * 1.4, PI * 1.6)
-        .size(0.03, 0.06)
+        .particle_size(0.03, 0.06)
         .color(
             Color::srgb_hex("#FFB433").with_opacity(0.6),
             Color::srgb_hex("#FF2A0D").with_opacity(0.0),
@@ -67,7 +67,7 @@ fn fog_scene() -> ParticleSystem {
         .life(8.0, 12.0)
         .speed(0.02, 0.08)
         .angle(PI * 1.4, PI * 1.6)
-        .size(0.1, 0.25)
+        .particle_size(0.1, 0.25)
         .color(
             Color::srgb_hex("#C8D7CC").with_opacity(0.12),
             Color::srgb_hex("#C8D7CC").with_opacity(0.0),
@@ -85,7 +85,7 @@ fn explosion_scene() -> ParticleSystem {
         .life(0.8, 1.5)
         .speed(0.5, 3.0)
         .angle(0.0, PI * 2.0)
-        .size(0.003, 0.008)
+        .particle_size(0.003, 0.008)
         .color(
             Color::srgb_hex("#FF7A00").with_opacity(1.0),
             Color::srgb_hex("#333333").with_opacity(1.0),
@@ -103,7 +103,7 @@ fn bounce_box_scene() -> ParticleSystem {
         .life(4.0, 6.0)
         .speed(0.5, 1.4)
         .angle(0.0, PI * 2.0)
-        .size(0.006, 0.014)
+        .particle_size(0.006, 0.014)
         .color(
             Color::srgb_hex("#85DBFF").with_opacity(0.95),
             Color::srgb_hex("#2EA4FF").with_opacity(0.2),

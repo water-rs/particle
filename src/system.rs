@@ -124,8 +124,19 @@ impl ParticleSystem {
     }
 
     /// Set particle size range.
+    ///
+    /// View sizing continues to resolve through [`waterui_core::View`] / `ViewExt::size`:
+    ///
+    /// ```
+    /// use waterui::{ViewExt as _, layout::frame::Frame};
+    /// use waterui_particle::{ParticleSystem, particles};
+    ///
+    /// let framed: Frame<ParticleSystem> =
+    ///     particles(64).particle_size(0.002, 0.004).size(300.0, 200.0);
+    /// # let _ = framed;
+    /// ```
     #[must_use]
-    pub fn size(
+    pub fn particle_size(
         mut self,
         start: impl IntoSignalF32 + 'static,
         end: impl IntoSignalF32 + 'static,
