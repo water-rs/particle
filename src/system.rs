@@ -9,9 +9,10 @@ use core::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use waterui_core::{Computed, Environment, IntoSignal, IntoSignalF32, SignalExt, View};
 use waterui_graphics::{
+    GpuView,
     backend::GpuContentLeaf,
     color::Color,
-    gpu::{FrameTime, GpuRuntime, GpuView, Offscreen, OffscreenFormat, Readback},
+    gpu::{FrameTime, GpuRuntime, Offscreen, OffscreenFormat, Readback},
     offscreen::{OffscreenError, OffscreenSize},
 };
 
@@ -346,7 +347,7 @@ impl ParticleSystem {
         let engine = runtime.engine()?;
         let pixels = (size.width(), size.height());
         let surface = engine.surface(Offscreen::new(pixels, OffscreenFormat::LinearF16), || {})?;
-        let content = GpuContentLeaf::new(renderer).take_engine_content();
+        let content = GpuContentLeaf::from(GpuView::new(renderer)).take_engine_content();
         let producer = engine.gpu_producer(content);
         surface.update(|tx| {
             tx[surface.root()].content(producer.at(pixels));

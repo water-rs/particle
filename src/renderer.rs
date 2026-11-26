@@ -14,8 +14,9 @@ use std::mem::offset_of;
 use std::sync::mpsc::{self, Receiver, Sender};
 use waterui_core::{Computed, Environment, Signal, SignalExt, flatten_signal};
 use waterui_graphics::{
+    GpuContent,
     color::WorkingColor,
-    gpu::{Context, Frame, GpuContent, wgpu},
+    gpu::{Context, Frame, wgpu},
 };
 
 /// Resolved particle configuration ready for GPU.
@@ -483,6 +484,8 @@ fn fill_mapped_buffer(buffer: &wgpu::Buffer, value: u8) {
 }
 
 impl GpuContent for ParticleRenderer {
+    type Params = ();
+
     #[expect(
         clippy::too_many_lines,
         reason = "GPU setup is one render-thread resource graph whose local handles encode dependency order"
@@ -794,8 +797,9 @@ mod tests {
     use glam::{Vec2, Vec4};
     use waterui_core::{Binding, Environment, SignalExt};
     use waterui_graphics::{
+        GpuContent,
         color::WorkingColor,
-        gpu::{Context, Frame, GpuContent, GpuRuntime, RedrawHandle, SharedGpuContext, wgpu},
+        gpu::{Context, Frame, GpuRuntime, RedrawHandle, SharedGpuContext, wgpu},
     };
 
     fn test_gpu_runtime() -> GpuRuntime {
@@ -940,7 +944,7 @@ mod tests {
 
     #[test]
     fn reactive_config_crosses_render_thread_channel() {
-        let rate = Binding::f32(100.0);
+        let rate = Binding::new(100.0_f32);
         let mut config = ParticleConfig::default();
         config.emitter.rate = rate.computed();
         let (feed, renderer) = ParticleRenderer::reactive(128, config, &Environment::new());
@@ -959,6 +963,8 @@ mod tests {
         }
 
         impl GpuContent for PrefilledParticleRenderer {
+            type Params = ();
+
             fn setup(&mut self, ctx: &Context<'_>) {
                 self.inner.setup(ctx);
 
